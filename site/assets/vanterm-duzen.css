@@ -212,3 +212,8 @@ body .cspt-ihbox.cspt-ihbox-style-hsbox .cspt-ihbox-heading .vc_custom_heading {
 /* Kutu + logo sütunu (ör. Müşteri kutusu altında firma logosu): logo dipte, sütun komşularıyla aynı yerde biter */
 .vt-esit > .vc_column-inner > .wpb_wrapper > .wpb_single_image:last-child { margin-bottom: 0; }
 .vt-esit > .vc_column-inner > .wpb_wrapper > .wpb_single_image { flex: 0 0 auto; }
+
+/* Lightbox'lı görseller: üzerine gelince büyüteç imleci */
+a.vt-lightbox { cursor: zoom-in; display: block; }
+a.vt-lightbox img { transition: opacity .2s ease; }
+a.vt-lightbox:hover img { opacity: .9; }

@@ -65,6 +65,30 @@
     var y = String(new Date().getFullYear());
     document.querySelectorAll('.vt-yil').forEach(function (e) { e.textContent = y; });
   }
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { mark(); year(); });
-  else { mark(); year(); }
+  // Lightbox'sız görsel linkleri (ör. iletişim sayfasındaki bayi haritaları): temanın Magnific Popup'ı ile açılır.
+  // Link küçük bir sürüme gidiyorsa, sayfadaki büyük görsel gösterilir. Sayfadaki görseller arasında oklarla geçilir.
+  function lightbox() {
+    var links = Array.prototype.slice.call(document.querySelectorAll('.wpb_single_image a[href]')).filter(function (a) {
+      return /\.(jpe?g|png|gif|webp)$/i.test(a.getAttribute('href')) && a.querySelector('img') &&
+             !a.closest('.cspt-lightbox, .mfp-gallery') && !/lightbox|mfp/.test(a.className);
+    });
+    if (!links.length) return;
+    links.forEach(function (a) {
+      var img = a.querySelector('img');
+      var big = img.getAttribute('src');
+      if (img.naturalWidth >= 800 || /-\d+x\d+\.(jpe?g|png|gif|webp)$/i.test(a.getAttribute('href'))) a.setAttribute('href', big);
+      a.classList.add('vt-lightbox');
+      a.setAttribute('title', img.getAttribute('title') || img.getAttribute('alt') || '');
+      a.removeAttribute('target');
+    });
+    if (window.jQuery && jQuery.fn.magnificPopup) {
+      jQuery(links).magnificPopup({
+        type: 'image', gallery: { enabled: true, tCounter: '%curr% / %total%' },
+        image: { titleSrc: 'title' }, mainClass: 'mfp-fade', closeOnContentClick: true
+      });
+    }
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { mark(); year(); lightbox(); });
+  else { mark(); year(); lightbox(); }
 })();
