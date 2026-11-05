@@ -217,6 +217,7 @@ def process_html(h: str, path: str, pages: set) -> str:
         if "vanterm-forms.js" not in h:
             h = h.replace("</body>", '<script src="/assets/vanterm-forms.js" defer></script>\n</body>', 1)
     h = add_alts(h, path)
+    h = linkify_contacts(h)
     for src_p, dst_p in REDIRECTS.items():
         h = h.replace(f'{SITE}{src_p}"', f'{SITE}{final_url(dst_p, pages)}"')
         h = h.replace(f'{SITE.replace("/", chr(92) + "/")}{src_p.replace("/", chr(92) + "/")}"',
@@ -342,6 +343,37 @@ def write_llms(pages_html: dict):
                    exclude=("/about-us/", "/products/", "/applications/", "/info-center/", "/contact-us/", "/product-registration/", "/privacy-policy/"))
     out += ["\n## Türkçe\n"] + [f"- [{info(p)[0]}]({SITE}{p})" for p in ("/tr/", "/tr/hakkimizda/", "/tr/urunler/", "/tr/uygulamalar/", "/tr/bilgi-merkezi/", "/tr/iletisim/") if p in pages_html]
     (OUT / "llms.txt").write_text("\n".join(out) + "\n", encoding="utf-8")
+
+
+# ---------------------------------------------------------------- tıklanabilir telefon / e-posta
+
+# Aranabilir numaralar (faks +90 (262) 751 1350 bilerek dışarıda)
+PHONES = {"+90 (262) 751 0594": "+902627510594"}
+EMAIL_RE = re.compile(r"(?<![\w.+-])([\w.+-]+@(?:[\w-]+\.)+[a-z]{2,})(?![\w-])", re.I)
+
+
+def linkify_contacts(h: str) -> str:
+    """Görünen metindeki telefon ve e-postaları tel: / mailto: linki yapar (link, script, stil ve başlık içi hariç)."""
+    parts = re.split(r"(<[^>]+>)", h)
+    skip = {"a": 0, "script": 0, "style": 0, "head": 0, "title": 0, "textarea": 0, "option": 0, "button": 0}
+    out = []
+    for part in parts:
+        if part.startswith("<"):
+            m = re.match(r"<(/?)([a-zA-Z]+)", part)
+            if m and m.group(2).lower() in skip and not part.endswith("/>"):
+                skip[m.group(2).lower()] += -1 if m.group(1) else 1
+                skip[m.group(2).lower()] = max(0, skip[m.group(2).lower()])
+            out.append(part)
+            continue
+        if any(skip.values()) or not part.strip():
+            out.append(part)
+            continue
+        t = part
+        for shown, num in PHONES.items():
+            t = t.replace(shown, f'<a href="tel:{num}" class="vt-tel">{shown}</a>')
+        t = EMAIL_RE.sub(lambda e: f'<a href="mailto:{e.group(1)}" class="vt-mail">{e.group(1)}</a>', t)
+        out.append(t)
+    return "".join(out)
 
 
 # ---------------------------------------------------------------- görsel alt metinleri

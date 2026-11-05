@@ -224,3 +224,7 @@ a.vt-lightbox:hover img { opacity: .9; }
 .cspt-pre-header-wrapper .cspt-social-links a i { color: #fff !important; }
 .cspt-pre-header-wrapper .cspt-social-links a:hover,
 .cspt-pre-header-wrapper .cspt-social-links a:hover i { color: var(--vt-mavi) !important; }
+
+/* Tıklanabilir telefon ve e-posta: bulunduğu yerin rengini ve yazı stilini korur */
+a.vt-tel, a.vt-mail { color: inherit !important; font: inherit; text-decoration: none; }
+a.vt-tel:hover, a.vt-mail:hover { text-decoration: underline; }
