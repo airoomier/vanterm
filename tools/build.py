@@ -184,6 +184,9 @@ def process_html(h: str, path: str, pages: set) -> str:
     h = re.sub(r'(<form[^>]*action=")/("[^>]*class="search-form")', r"\1/search/\2", h)
     h = re.sub(r'(<form[^>]*action=")/tr/("[^>]*class="search-form")', r"\1/tr/search/\2", h)
 
+    # Yan sütundaki ay arşivi kutusu (Archives / Arşiv): tarih arşivleri orijinalde de ana sayfaya yönleniyordu
+    h = re.sub(r'\s*<aside id="archives-\d+" class="[^"]*widget_archive[^"]*">.*?</aside>', "", h, flags=re.S)
+
     # Yazı kutularındaki "0 Comment" satırı
     h = re.sub(r'\s*<div class="cspt-meta-date-wrapper cspt-meta-line">\s*<i class="cspt-base-icon-comment-empty"></i>.*?</div>',
                "", h, flags=re.S)

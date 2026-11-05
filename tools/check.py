@@ -20,6 +20,7 @@ if (ROOT / "tools" / "redirects-seo.json").exists():
 
 
 def visible_text(h: str) -> str:
+    h = re.sub(r'<aside id="archives-\d+" class="[^"]*widget_archive[^"]*">.*?</aside>', " ", h, flags=re.S)  # bilerek kaldırıldı
     h = re.sub(r"<(script|style|noscript|head)[^>]*>.*?</\1>", " ", h, flags=re.S | re.I)
     h = re.sub(r"<[^>]+>", " ", h)
     t = unescape(h)
