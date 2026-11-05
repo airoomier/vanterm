@@ -105,7 +105,7 @@ var cspt_js_variables = {"responsive":"1200"};
 				var options = '';
 			}
 
-         	function nocontextmenu(e) { return false; }
+         	function nocontextmenu(e) { e = e || window.event; var t = e && e.target; if (t && t.closest && t.closest('input, textarea, select, [contenteditable]')) return true; return false; }
          	document.oncontextmenu = nocontextmenu;
          	document.ondragstart = function() { return false;}
 
@@ -134,7 +134,7 @@ var cspt_js_variables = {"responsive":"1200"};
 				var events = eventNames.split(' ');
 				for (var i = 0, iLen = events.length; i < iLen; i++) {
 					element.addEventListener(events[i], function (e) {
-						e.preventDefault();
+						if (e.target && e.target.closest && e.target.closest('input, textarea, select, [contenteditable]')) return; e.preventDefault();
 						if (show_msg !== '0') {
 							show_toast(listener);
 						}

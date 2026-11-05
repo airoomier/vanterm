@@ -187,6 +187,14 @@ def process_html(h: str, path: str, pages: set) -> str:
     # Yan sütundaki ay arşivi kutusu (Archives / Arşiv): tarih arşivleri orijinalde de ana sayfaya yönleniyordu
     h = re.sub(r'\s*<aside id="archives-\d+" class="[^"]*widget_archive[^"]*">.*?</aside>', "", h, flags=re.S)
 
+    # Kopyalama kilidi (orijinaldeki "Disable Right Click" betiği): form alanlarında yapıştırma/kopyalama/sağ tık serbest
+    FORM_ALANI = "input, textarea, select, [contenteditable]"
+    h = h.replace("function nocontextmenu(e) { return false; }",
+                  "function nocontextmenu(e) { e = e || window.event; var t = e && e.target; "
+                  f"if (t && t.closest && t.closest('{FORM_ALANI}')) return true; return false; }}")
+    h = re.sub(r"(element\.addEventListener\(events\[i\], function \(e\) \{\s*)e\.preventDefault\(\);",
+               lambda m: m.group(1) + f"if (e.target && e.target.closest && e.target.closest('{FORM_ALANI}')) return; e.preventDefault();", h)
+
     # Yazı kutularındaki "0 Comment" satırı
     h = re.sub(r'\s*<div class="cspt-meta-date-wrapper cspt-meta-line">\s*<i class="cspt-base-icon-comment-empty"></i>.*?</div>',
                "", h, flags=re.S)
