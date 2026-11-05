@@ -180,6 +180,14 @@ def process_html(h: str, path: str, pages: set) -> str:
     h = re.sub(r'(<form[^>]*action=")/("[^>]*class="search-form")', r"\1/search/\2", h)
     h = re.sub(r'(<form[^>]*action=")/tr/("[^>]*class="search-form")', r"\1/tr/search/\2", h)
 
+    # Yazı kutularındaki "0 Comment" satırı
+    h = re.sub(r'\s*<div class="cspt-meta-date-wrapper cspt-meta-line">\s*<i class="cspt-base-icon-comment-empty"></i>.*?</div>',
+               "", h, flags=re.S)
+
+    # Düzen standardı CSS'i (tema CSS'lerinden sonra)
+    if "vanterm-duzen.css" not in h and "</head>" in h:
+        h = h.replace("</head>", '<link rel="stylesheet" href="/assets/vanterm-duzen.css" media="all" />\n</head>', 1)
+
     # Formlar
     if "wpforms-form" in h:
         h = remove_wpforms_scripts(h)

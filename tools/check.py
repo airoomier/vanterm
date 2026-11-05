@@ -24,7 +24,9 @@ def visible_text(h: str) -> str:
     t = re.sub(r"@(www\.)?demo\.seowpclub\.com", "@vanterm.com", t)
     t = re.sub(r"(https?:)?//(www\.)?demo\.seowpclub\.com", "", t)
     t = t.replace("https://vanterm.com", "")
-    return re.sub(r"\s+", " ", t).strip()
+    t = re.sub(r"\s+", " ", t).strip()
+    t = re.sub(r"\s?0 Comment\b", "", t)  # yazı kutularındaki yorum satırı bilerek kaldırıldı
+    return t
 
 
 def exists(url: str) -> bool:

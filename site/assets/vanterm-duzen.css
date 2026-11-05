@@ -1,0 +1,109 @@
+/* ==========================================================================
+   Vanterm — düzen standardı (tema CSS'inden sonra yüklenir)
+   1) Aynı satırdaki kutular eşit yükseklikte, "Read More/Details/Download" linkleri kutu dibinde hizalı
+   2) Kutu başlıkları ve linkleri tüm sitede aynı boyut ve hizada
+   ========================================================================== */
+
+:root {
+  --vt-baslik: 22px;        /* kutu başlıkları */
+  --vt-baslik-lh: 1.3;
+  --vt-link: 13px;          /* Read More / Details / Download */
+  --vt-mavi: #0fb0ee;       /* temanın ana rengi */
+  --vt-koyu: #1e2227;
+}
+
+/* ---------- 1. Eşit yükseklik: tema ızgaraları ve kaydırıcılar ---------- */
+
+/* Izgara (row) */
+.cspt-element-posts-wrapper.row,
+.cspt-element-cat-wrapper.row {
+  display: flex;
+  flex-wrap: wrap;
+}
+.cspt-element-posts-wrapper.row::before, .cspt-element-posts-wrapper.row::after,
+.cspt-element-cat-wrapper.row::before, .cspt-element-cat-wrapper.row::after { content: none; }
+
+/* Kaydırıcı (Owl Carousel) */
+.owl-carousel .owl-stage { display: flex; }
+.owl-carousel .owl-item { display: flex; float: none; }
+.owl-carousel .owl-item > .cspt-ele { display: flex !important; width: 100%; max-width: 100%; flex: 1 1 auto; }
+.owl-carousel .owl-item > .cspt-ele > article.creativesplanet-ele { height: auto; }
+
+/* Kutu kapsayıcıları */
+.cspt-element-posts-wrapper > .cspt-ele,
+.cspt-element-cat-wrapper > .cspt-ele { display: flex !important; }
+
+.cspt-ele > article.creativesplanet-ele { display: flex; flex-direction: column; width: 100%; }
+.cspt-ele > article.creativesplanet-ele > .creativesplanet-post-item,
+.cspt-ele > article.creativesplanet-ele > .post-item {
+  display: flex; flex-direction: column; flex: 1 1 auto; width: 100%;
+}
+.creativesplanet-ele .creativesplanet-box-content {
+  display: flex; flex-direction: column; flex: 1 1 auto;
+}
+.creativesplanet-ele .creativesplanet-box-content-inner {
+  display: flex; flex-direction: column; flex: 1 1 auto; width: 100%;
+}
+.creativesplanet-ele-blog .creativesplanet-box-desc { margin-top: auto; }
+.creativesplanet-ele .cspt-service-btn { margin-top: auto; }
+.creativesplanet-ele-portfolio .cspt-content-wrapper { flex: 1 1 auto; }
+
+/* İkonlu bilgi kutuları (Case Study Facts, Download vb.): WPBakery satırında eşit boy */
+.vc_row:has(> .wpb_column .cspt-ihbox),
+.vc_inner:has(> .wpb_column .cspt-ihbox) { display: flex; flex-wrap: wrap; }
+.vc_row:has(> .wpb_column .cspt-ihbox)::before, .vc_row:has(> .wpb_column .cspt-ihbox)::after,
+.vc_inner:has(> .wpb_column .cspt-ihbox)::before, .vc_inner:has(> .wpb_column .cspt-ihbox)::after { content: none; }
+.wpb_column:has(.cspt-ihbox) { display: flex; }
+.wpb_column:has(.cspt-ihbox) > .vc_column-inner { display: flex; flex-direction: column; width: 100%; }
+.wpb_column:has(.cspt-ihbox) > .vc_column-inner > .wpb_wrapper { display: flex; flex-direction: column; flex: 1 1 auto; }
+.wpb_column:has(.cspt-ihbox) > .vc_column-inner > .wpb_wrapper > .cspt-ihbox { flex: 1 1 auto; display: flex; flex-direction: column; }
+.cspt-ihbox > .cspt-ihbox-contents { display: flex; flex-direction: column; flex: 1 1 auto; }
+.cspt-ihbox .cspt-ihbox-btn { margin-top: auto; padding-top: 12px; }
+
+/* ---------- 2. Tipografi standardı ---------- */
+
+/* Kutu başlıkları: uygulama, ürün, yazı, ilgili yazı */
+.creativesplanet-ele .cspt-service-title,
+.creativesplanet-ele .cspt-portfolio-title,
+.creativesplanet-ele .cspt-post-title {
+  font-size: var(--vt-baslik) !important;
+  line-height: var(--vt-baslik-lh) !important;
+  font-weight: 700;
+  text-align: left;
+  word-break: normal;
+  overflow-wrap: break-word;
+  hyphens: manual;
+}
+.creativesplanet-ele .cspt-service-title a,
+.creativesplanet-ele .cspt-portfolio-title a,
+.creativesplanet-ele .cspt-post-title a { color: var(--vt-koyu); }
+.creativesplanet-ele .cspt-service-title a:hover,
+.creativesplanet-ele .cspt-portfolio-title a:hover,
+.creativesplanet-ele .cspt-post-title a:hover { color: var(--vt-mavi); }
+
+/* Kutu içerikleri sola hizalı */
+.creativesplanet-ele .creativesplanet-box-content,
+.creativesplanet-ele .creativesplanet-box-content-inner,
+.creativesplanet-ele .cspt-service-btn,
+.creativesplanet-ele .cspt-content-wrapper { text-align: left; align-items: flex-start; }
+
+/* Read More / Details / Download linkleri */
+.creativesplanet-ele .cspt-service-btn a.vc_btn3,
+.creativesplanet-ele .cspt-read-more-link a,
+.cspt-ihbox .cspt-ihbox-btn a.vc_btn3 {
+  font-size: var(--vt-link) !important;
+  line-height: 1.4 !important;
+  font-weight: 700 !important;
+  letter-spacing: 1px !important;
+  text-transform: uppercase !important;
+  color: var(--vt-mavi) !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+
+/* Yazı kutularında tarih satırı (yorum satırı kaldırıldı) */
+.creativesplanet-ele-blog .cspt-meta-container { margin-bottom: 10px; }
+
+@media (max-width: 767px) {
+  :root { --vt-baslik: 20px; }
+}
