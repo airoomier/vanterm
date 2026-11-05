@@ -217,3 +217,10 @@ body .cspt-ihbox.cspt-ihbox-style-hsbox .cspt-ihbox-heading .vc_custom_heading {
 a.vt-lightbox { cursor: zoom-in; display: block; }
 a.vt-lightbox img { transition: opacity .2s ease; }
 a.vt-lightbox:hover img { opacity: .9; }
+
+/* Üst bar (adres / telefon satırı): sosyal medya ikonları ve ayıraç beyaz */
+.cspt-pre-header-wrapper ul.cspt-contact-info > li:after { background-color: #fff !important; }
+.cspt-pre-header-wrapper .cspt-social-links a,
+.cspt-pre-header-wrapper .cspt-social-links a i { color: #fff !important; }
+.cspt-pre-header-wrapper .cspt-social-links a:hover,
+.cspt-pre-header-wrapper .cspt-social-links a:hover i { color: var(--vt-mavi) !important; }

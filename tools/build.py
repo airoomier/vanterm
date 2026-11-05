@@ -173,6 +173,7 @@ def process_html(h: str, path: str, pages: set) -> str:
 
     # Diğer her şey kök-göreli
     h = to_rel(h)
+    h = live_to_rel_html(h)
     h = strip_qs(h)
     h = resolve_links(h, pages)
 
@@ -219,8 +220,30 @@ def version_assets(h: str) -> str:
     return h
 
 
+LIVE_RE = re.compile(r"(?:https?:)?//(?:www\.)?vanterm\.com(?=[/\"')\s]|$)")
+
+
+def live_to_rel_css(s: str) -> str:
+    """CSS içindeki eski canlı site adreslerini (http://www.vanterm.com/...) kök-göreli yapar."""
+    return LIVE_RE.sub("", s)
+
+
+def live_to_rel_html(h: str) -> str:
+    """İçerikteki https://vanterm.com/... linklerini kök-göreli yapar (demo/yerel/canlıda çalışır).
+    canonical, hreflang, meta (OG/Twitter) etiketleri ve JSON-LD mutlak kalır."""
+    def tag(m):
+        t = m.group(0)
+        if t.startswith("<meta") or (t.startswith("<link") and ("canonical" in t or "hreflang" in t or "shortlink" in t)):
+            return t
+        t = re.sub(r'((?:href|src|action|data-[\w-]+)=")(?:https?:)?//(?:www\.)?vanterm\.com(/[^"]*)?"',
+                   lambda a: a.group(1) + (a.group(2) or "/") + '"', t)
+        t = re.sub(r"url\((['\"]?)(?:https?:)?//(?:www\.)?vanterm\.com/", r"url(\1/", t)
+        return t
+    return re.sub(r"<(?:a|img|link|script|form|source|iframe|div|section|span|li|input|meta|figure)\b[^>]*>", tag, h)
+
+
 def process_css(s: str) -> str:
-    return strip_qs(to_rel(s))
+    return strip_qs(live_to_rel_css(to_rel(s)))
 
 
 # ---------------------------------------------------------------- form ayarları
