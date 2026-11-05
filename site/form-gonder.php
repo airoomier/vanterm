@@ -21,13 +21,22 @@ function cevap(bool $ok, string $mesaj, int $kod = 200): void {
         echo json_encode(['ok' => $ok, 'message' => $mesaj], JSON_UNESCAPED_UNICODE);
     } else {
         $geri = $_POST['page_url'] ?? '/';
-        $geri = (is_string($geri) && str_starts_with($geri, '/')) ? $geri : '/';
+        // Yalnızca site içi yol: "/..." kabul, "//baska-site" ve "/\\" reddedilir (açık yönlendirme koruması)
+        $geri = (is_string($geri) && preg_match('#^/(?![/\\\\])[A-Za-z0-9/_\-.%]*$#', $geri)) ? $geri : '/';
         header('Location: ' . $geri . ($ok ? '?gonderildi=1' : '?hata=1'), true, 303);
     }
     exit;
 }
 
 if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') cevap(false, 'Method not allowed', 405);
+
+// Başka sitelerden gönderimi reddet (tarayıcı Origin/Referer gönderiyorsa kendi alan adımız olmalı)
+$host   = strtolower(preg_replace('/:\d+$/', '', (string)($_SERVER['HTTP_HOST'] ?? '')));
+$kaynak = $_SERVER['HTTP_ORIGIN'] ?? ($_SERVER['HTTP_REFERER'] ?? '');
+if ($kaynak !== '' && strtolower((string)parse_url($kaynak, PHP_URL_HOST)) !== $host) cevap(false, 'Forbidden', 403);
+
+// Aşırı büyük gönderimleri reddet
+if ((int)($_SERVER['CONTENT_LENGTH'] ?? 0) > 100000 || count($_POST, COUNT_RECURSIVE) > 60) cevap(false, 'Payload too large', 413);
 
 $wp     = $_POST['wpforms'] ?? [];
 $formId = (string)($wp['id'] ?? '');

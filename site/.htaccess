@@ -111,6 +111,11 @@ RewriteRule ^(.*[^/])$ /$1/ [L,R=301]
   Require all denied
 </Files>
 
+# Hassas dosyalara erişim yok (php.ini, .user.ini, gizli dosyalar, log/yedek/arşiv)
+<FilesMatch "(^\.|^php\.ini$|\.(ini|log|sql|bak|old|orig|swp|zip|tar|gz|rar|7z|sh|py|md|yml|yaml|env|conf)$)">
+  Require all denied
+</FilesMatch>
+
 # Sıkıştırma
 <IfModule mod_deflate.c>
   AddOutputFilterByType DEFLATE text/html text/css application/javascript text/javascript application/json image/svg+xml application/xml text/xml font/ttf application/vnd.ms-fontobject
@@ -137,4 +142,12 @@ RewriteRule ^(.*[^/])$ /$1/ [L,R=301]
 <IfModule mod_headers.c>
   Header always set X-Content-Type-Options "nosniff"
   Header always set Referrer-Policy "strict-origin-when-cross-origin"
+  # Siteyi başka sitelerin içine gömme (clickjacking) engeli
+  Header always set X-Frame-Options "SAMEORIGIN"
+  Header always set Content-Security-Policy "frame-ancestors 'self'; base-uri 'self'; form-action 'self'; object-src 'none'"
+  # Tarayıcıya yalnızca HTTPS kullanmasını söyle (HTTP isteklerinde tarayıcı bu başlığı yok sayar)
+  Header always set Strict-Transport-Security "max-age=31536000"
+  # Kamera, mikrofon, konum gibi izinler kapalı
+  Header always set Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()"
+  Header unset X-Powered-By
 </IfModule>
