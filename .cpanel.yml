@@ -1,0 +1,7 @@
+---
+# cPanel Git Version Control dağıtım tanımı.
+# "Deploy HEAD Commit" veya deploy/auto-deploy.sh çalıştığında site/ içeriği public_html'e kopyalanır.
+deployment:
+  tasks:
+    - export DEPLOYPATH=$HOME/public_html/
+    - /bin/cp -R site/. $DEPLOYPATH

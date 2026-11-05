@@ -1,0 +1,5 @@
+User-agent: *
+Disallow: /form-gonder.php
+Disallow: /form-ayarlar.php
+
+Sitemap: https://vanterm.com/sitemap_index.xml

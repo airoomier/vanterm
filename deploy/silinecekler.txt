@@ -1,0 +1,2 @@
+# Sunucudan silinmesi gereken dosya/klasörler (public_html'e göre yol). Her satıra bir tane.
+# Örnek: eski-sayfa/index.html

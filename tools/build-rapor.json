@@ -1,0 +1,21 @@
+{
+ "sayfa": 232,
+ "form": {
+  "14351": "Contact Us (EN)",
+  "14365": "Product Registration (EN)",
+  "14359": "Ürün Kaydı (TR)",
+  "14366": "İletişim (TR)"
+ },
+ "eksik": [
+  "/KTM-Workstation_ENG_Data_Sheet.pdf",
+  "/KTM-Workstation_USA.pdf",
+  "/wp-content/plugins/wpforms-lite/assets/images/crop.svg",
+  "/wp-content/plugins/wpforms-lite/assets/pro/images/camera-rotate.svg",
+  "/wp-content/plugins/wpforms-lite/assets/pro/images/camera-video.svg",
+  "/wp-content/plugins/wpforms-lite/assets/pro/images/camera.svg",
+  "/wp-content/plugins/wpforms-lite/assets/pro/images/cancel.svg",
+  "/wp-content/plugins/wpforms-lite/assets/pro/images/crop.svg",
+  "/wp-content/plugins/wpforms-lite/assets/pro/images/times-solid-white.svg",
+  "/wp-content/plugins/wpforms-lite/assets/pro/images/trash.svg"
+ ]
+}
