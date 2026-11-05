@@ -159,6 +159,7 @@ def process_html(h: str, path: str, pages: set) -> str:
     h = re.sub(r'<meta (?:property|name)="(?:og|twitter|article):[^"]*"[^>]*>', lambda m: to_abs(m.group(0)), h)
     h = re.sub(r'(<script type="application/ld\+json"[^>]*>)(.*?)(</script>)',
                lambda m: m.group(1) + to_abs(m.group(2)) + m.group(3), h, flags=re.S)
+    h = enrich_schema(h, path)
 
     # hreflang (dil seçicisindeki karşılıklardan)
     cp = {k: to_rel(v) for k, v in find_counterparts(h).items()}
@@ -204,6 +205,11 @@ def process_html(h: str, path: str, pages: set) -> str:
         h = remove_wpforms_scripts(h)
         if "vanterm-forms.js" not in h:
             h = h.replace("</body>", '<script src="/assets/vanterm-forms.js" defer></script>\n</body>', 1)
+    h = add_alts(h, path)
+    for src_p, dst_p in REDIRECTS.items():
+        h = h.replace(f'{SITE}{src_p}"', f'{SITE}{final_url(dst_p, pages)}"')
+        h = h.replace(f'{SITE.replace("/", chr(92) + "/")}{src_p.replace("/", chr(92) + "/")}"',
+                      f'{SITE.replace("/", chr(92) + "/")}{final_url(dst_p, pages).replace("/", chr(92) + "/")}"')
     return version_assets(h)
 
 
@@ -244,6 +250,202 @@ def live_to_rel_html(h: str) -> str:
 
 def process_css(s: str) -> str:
     return strip_qs(live_to_rel_css(to_rel(s)))
+
+
+# ---------------------------------------------------------------- yapılandırılmış veri (GEO)
+
+# Sitede görünen şirket bilgileri (üst bar, alt bilgi, iletişim sayfası)
+ORG_EXTRA = {
+    "alternateName": "VANTERM",
+    "foundingDate": "1971",
+    "email": "bilgi@vanterm.com",
+    "telephone": "+90-262-751-0594",
+    "address": {"@type": "PostalAddress", "streetAddress": "Gebze Organize Sanayi Bölgesi 800 Sok. No:804",
+                "addressLocality": "Gebze", "addressRegion": "Kocaeli", "postalCode": "41480", "addressCountry": "TR"},
+    "contactPoint": {"@type": "ContactPoint", "telephone": "+90-262-751-0594", "email": "bilgi@vanterm.com",
+                     "contactType": "sales", "availableLanguage": ["en", "tr"]},
+    "sameAs": ["https://www.youtube.com/user/VANTERMSince1971"],
+}
+
+
+def enrich_schema(h: str, path: str) -> str:
+    """Yoast şemasına: şirket iletişim bilgileri; uygulama (vaka çalışması) sayfalarına Article düğümü."""
+    def rep(m):
+        try:
+            d = json.loads(m.group(2))
+        except Exception:
+            return m.group(0)
+        graph = d.get("@graph", [])
+        org = next((n for n in graph if n.get("@type") == "Organization"), None)
+        org_id = org.get("@id") if org else f"{SITE}/#organization"
+        page = next((n for n in graph if n.get("@type") in ("WebPage", "CollectionPage", "ItemPage")), None)
+        for n in graph:
+            if n.get("@type") == "Organization":
+                for k, v in ORG_EXTRA.items():
+                    n.setdefault(k, v)
+        is_case = re.match(r"^/(application|tr/uygulama-tr)/[^/]+/$", path)
+        if is_case and page and not any(n.get("@type") == "Article" for n in graph):
+            url = page.get("url") or page.get("@id")
+            art = {"@type": "Article", "@id": url + "#article", "isPartOf": {"@id": url}, "mainEntityOfPage": {"@id": url},
+                   "headline": re.sub(r"\s*\|\s*Vanterm\s*$", "", page.get("name", ""))[:110],
+                   "articleSection": "Uygulama Örnekleri" if lang_of(path) == "tr" else "Case Studies",
+                   "author": {"@id": org_id}, "publisher": {"@id": org_id}, "inLanguage": page.get("inLanguage")}
+            for k in ("description", "datePublished", "dateModified"):
+                if page.get(k): art[k] = page[k]
+            img = next((n for n in graph if n.get("@type") == "ImageObject"), None)
+            if img: art["image"] = {"@id": img.get("@id")}
+            graph.append(art)
+        return m.group(1) + json.dumps(d, ensure_ascii=False, separators=(",", ":")) + m.group(3)
+    return re.sub(r'(<script type="application/ld\+json"[^>]*>)(.*?)(</script>)', rep, h, count=1, flags=re.S)
+
+
+def write_llms(pages_html: dict):
+    """Yapay zeka arama motorları için site özeti (llms.txt, https://llmstxt.org biçimi)."""
+    def info(p):
+        h = pages_html.get(p, "")
+        d = re.search(r'<meta name="description" content="([^"]+)"', h)
+        if not d:
+            j = re.search(r'"@type":"WebPage"[^}]*?"description":"([^"]+)"', h)
+            d = j
+        return page_name(h, p), (html_unescape(d.group(1)) if d else "")
+
+    def section(title, prefix, exclude=()):
+        lines = [f"\n## {title}\n"]
+        for p in sorted(x for x in pages_html if re.match(prefix, x) and x not in exclude):
+            n, d = info(p)
+            if n:
+                lines.append(f"- [{n}]({SITE}{p})" + (f": {d}" if d else ""))
+        return lines
+
+    out = ["# Vanterm", "",
+           "> VANTERM (Gebze, Kocaeli, Turkey) has designed and manufactured industrial dust collectors, fume extractors "
+           "and filtration systems since 1971: mobile and central filter units, extraction arms, workbenches and cutting "
+           "tables for welding, laser/plasma cutting, grinding, sandblasting and woodworking. The site is bilingual "
+           "(English at /, Turkish at /tr/).", "",
+           f"Contact: bilgi@vanterm.com · +90 262 751 05 94 · {SITE}/contact-us/"]
+    out += ["\n## Company\n"] + [f"- [{info(p)[0]}]({SITE}{p})" for p in ("/about-us/", "/products/", "/applications/", "/info-center/", "/contact-us/", "/product-registration/") if p in pages_html]
+    out += section("Products", r"^/product/[^/]+/$")
+    out += section("Product categories", r"^/portfolio-category/[^/]+/$")
+    out += section("Applications (case studies)", r"^/application/[^/]+/$")
+    out += section("Articles", r"^/(?!tr/|product/|application/|portfolio-category/|category/|tag/|application-category/|author/|search/)[^/]+/$",
+                   exclude=("/about-us/", "/products/", "/applications/", "/info-center/", "/contact-us/", "/product-registration/", "/privacy-policy/"))
+    out += ["\n## Türkçe\n"] + [f"- [{info(p)[0]}]({SITE}{p})" for p in ("/tr/", "/tr/hakkimizda/", "/tr/urunler/", "/tr/uygulamalar/", "/tr/bilgi-merkezi/", "/tr/iletisim/") if p in pages_html]
+    (OUT / "llms.txt").write_text("\n".join(out) + "\n", encoding="utf-8")
+
+
+# ---------------------------------------------------------------- görsel alt metinleri
+
+TR_WORDS = {"application": "uygulama", "applications": "uygulamaları", "photo": "fotoğraf", "photos": "fotoğraflar",
+            "certification": "sertifika", "certificate": "sertifika", "detail": "detay", "details": "detaylar",
+            "and": "ve", "filter": "filtre", "unit": "ünitesi", "units": "üniteleri"}
+
+
+# Referans logoları (dosya adı anlamsız olanlar; logolara bakılarak eşlendi)
+CLIENT_LOGOS = {"client-logo-6-1": "Borusan Cat", "client-logo-2": "Siemens", "client-logo-3": "Kirchhoff Automotive",
+                "client-logo-4": "Mercedes-Benz", "client-logo-7": "Aygaz", "client-logo-8": "IPG Photonics",
+                "client-logo-9": "Teknik Malzeme", "client-logo-1": "Turkish Technic", "client-logo-5": "Hektaş"}
+SLUG_ALT = re.compile(r"[A-Za-z0-9]+(?:[-_][A-Za-z0-9]+){2,}")
+
+
+def humanize(name: str, lang: str) -> str:
+    """Dosya adı/başlıktan okunur metin: 'KTM-1500-1-770x350.jpg' -> 'KTM 1500'."""
+    n = re.sub(r"\.(jpe?g|png|gif|webp|svg)$", "", name, flags=re.I)
+    n = re.sub(r"-\d+x\d+$", "", n)
+    n = re.sub(r"(?:[-_ ]\d{1,2})+$", "", n)            # sondaki -1, -2-1 gibi sıra ekleri
+    n = re.sub(r"[-_]+", " ", n).strip()
+    n = re.sub(r"\b(?:scaled|copy|min|edited|e\d+)\b", "", n, flags=re.I).strip()
+    if lang == "tr":
+        n = " ".join(TR_WORDS.get(w.lower(), w) for w in n.split())
+    return n[:1].upper() + n[1:] if n else ""
+
+
+def page_name(h: str, path: str = "") -> str:
+    m = None if path in ("/", "/tr/") else re.search(r"<h1[^>]*>(.*?)</h1>", h, re.S)
+    t = html_unescape(re.sub(r"<[^>]+>", " ", m.group(1))).strip() if m else ""
+    if not t or len(t) > 90:
+        m = re.search(r"<title>(.*?)</title>", h, re.S)
+        t = html_unescape(m.group(1)).strip() if m else ""
+        t = re.sub(r"\s*[|\-–]\s*Vanterm.*$", "", t)
+        t = re.sub(r"^Vanterm\s*[|\-–]\s*", "", t)
+    return re.sub(r"\s+", " ", t).strip()
+
+
+def esc_attr(s: str) -> str:
+    return s.replace("&", "&amp;").replace('"', "&quot;").replace("<", "&lt;").replace(">", "&gt;")
+
+
+def add_alts(h: str, path: str) -> str:
+    """Ana içerikte alt metni olmayan görsellere bağlamdan açıklayıcı alt metin ekler."""
+    lang = lang_of(path)
+    name = page_name(h, path)
+    ms = re.search(r"<main[^>]*>", h); me = h.rfind("</main>")
+    if not ms or me < 0:
+        return h
+    a, b = ms.end(), me
+    body = h[a:b]
+
+    def strip(x):
+        return re.sub(r"\s+", " ", html_unescape(re.sub(r"<[^>]+>", " ", x))).strip()
+
+    out, pos = [], 0
+    for im in re.finditer(r"<img\b[^>]*>", body):
+        tag = im.group(0)
+        cur = re.search(r'\balt="([^"]*)"', tag)
+        before, after = body[max(0, im.start() - 600):im.start()], body[im.end():im.end() + 3000]
+        in_card = bool(re.search(r"<article class=\"creativesplanet-ele creativesplanet-ele-(service|portfolio|blog)", before)) and \
+            "</article>" not in before[before.rfind("<article"):]
+        # Kart görsellerinde alt metin her zaman kartın başlığı (orijinalde EN sayfada TR alt metinler vardı);
+        # diğerlerinde anlamlı alt metin varsa korunur
+        if not in_card and cur and cur.group(1).strip() and not SLUG_ALT.fullmatch(cur.group(1).strip()):
+            continue
+        src = (re.search(r'src="([^"]+)"', tag) or [None, ""])[1].split("/")[-1]
+        title_attr = (re.search(r'title="([^"]*)"', tag) or [None, ""])[1]
+        alt = ""
+        # 1) Kart (uygulama/ürün/yazı): kartın başlığı
+        if re.search(r"<article class=\"creativesplanet-ele creativesplanet-ele-(service|portfolio|blog)", before) and \
+                "</article>" not in before[before.rfind("<article"):]:
+            t = re.search(r'class="cspt-(?:service|portfolio|post)-title"[^>]*>(.*?)</h3>', after.split("</article>")[0], re.S)
+            if t: alt = strip(t.group(1))
+        # 2) Müşteri/referans logosu
+        if not alt and re.search(r"creativesplanet-ele-client|cspt-client", before):
+            key = re.sub(r"\.(png|jpe?g|gif|webp)$", "", src, flags=re.I)
+            n = CLIENT_LOGOS.get(key) or humanize(src, lang)
+            generic = not n or re.match(r"(?i)client logo|logo$", n)
+            alt = ("Referans müşteri logosu" if lang == "tr" else "Reference customer logo") if generic else \
+                  re.sub(r"(?i)\s*logo\s*$", "", n) + " logo"
+        # 3) Özellik kutusu: ürün adı + kutu başlığı
+        if not alt and "cspt-static-box" in before[-300:]:
+            t = re.search(r'creativesplanet-box-title"><h4>(.*?)</h4>', after[:800], re.S)
+            if t: alt = f"{name} – {strip(t.group(1))}" if name else strip(t.group(1))
+        # 4) Öne çıkan görsel (yazı/uygulama başı): sayfa adı
+        if not alt and re.search(r'cspt-featured-wrapper"?>\s*(<a[^>]*>)?\s*$', before):
+            alt = name
+        # 5) Diğer (galeri, içerik görseli): sayfa adı + dosya adından model/konu
+        if not alt:
+            n = humanize(title_attr or src, lang)
+            # Dosya adı sayfa adıyla başlıyorsa tekrarı at: "Push pull system solution welding ..." -> "welding ..."
+            if n and name:
+                nw, pw = n.lower().split(), re.sub(r"[^\w\s]", " ", name.lower()).split()
+                k = 0
+                while k < len(nw) and k < len(pw) and nw[k] == pw[k]:
+                    k += 1
+                if k >= 2:
+                    n = " ".join(n.split()[k:])
+            if lang == "tr" and n and not re.search(r"\d", n):
+                # Türkçe sayfada İngilizce dosya adı eklenmez; model kodu yoksa sayfa türüne göre Türkçe ifade
+                n = "uygulama fotoğrafı" if path.startswith("/tr/uygulama-tr/") else \
+                    "ürün görseli" if path.startswith(("/tr/urun/", "/tr/urun-kategorisi/")) else ""
+            if n and name and n.lower() not in name.lower():
+                alt = f"{name} – {n}"
+            else:
+                alt = name or n
+        if not alt:
+            continue
+        new = re.sub(r'\salt="[^"]*"', "", tag)
+        new = new.replace("<img", f'<img alt="{esc_attr(alt)}"', 1)
+        out.append(body[pos:im.start()]); out.append(new); pos = im.end()
+    out.append(body[pos:])
+    return h[:a] + "".join(out) + h[b:]
 
 
 # ---------------------------------------------------------------- form ayarları
@@ -379,6 +581,10 @@ def main():
     rfile = ROOT / "tools" / "redirects.json"
     if rfile.exists():
         redirects = json.loads(rfile.read_text(encoding="utf-8"))
+    # SEO kararıyla eklenen yönlendirmeler (orijinalde canonical ile ana sayfayı gösteren kopya arşiv sayfaları)
+    sfile = ROOT / "tools" / "redirects-seo.json"
+    if sfile.exists():
+        redirects.update(json.loads(sfile.read_text(encoding="utf-8")))
     REDIRECTS.update(redirects)
     html_files = [p for p in src.rglob("index.html") if "?" not in str(p) and "wp-content" not in p.parts
                   and page_path(p.relative_to(src)) not in redirects]
@@ -452,6 +658,9 @@ def main():
     for f in (ROOT / "tools" / "sitemaps").glob("*.xml"):
         x = f.read_text(encoding="utf-8")
         x = re.sub(r"<\?xml-stylesheet[^>]*\?>", "", x)
+        # yönlendirilen (artık var olmayan) adresleri haritadan çıkar
+        x = re.sub(r"<url>\s*<loc>(?:https?:)?//(?:www\.)?demo\.seowpclub\.com([^<]*)</loc>.*?</url>\s*",
+                   lambda m: "" if m.group(1) in redirects else m.group(0), x, flags=re.S)
         (OUT / f.name).write_text(to_abs(x), encoding="utf-8")
 
     # 5) form ayarları
@@ -478,6 +687,9 @@ def main():
         img = img.group(1).replace(SITE, "") if img else ""
         index.append({"u": path, "l": lang_of(path), "t": title, "e": exc[:200], "i": img, "x": text[:4000]})
     (OUT / "search-index.json").write_text(json.dumps(index, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+
+    # 5c) yapay zeka arama motorları için site özeti
+    write_llms(html_by_path)
 
     # 6) eksik dosyaları bul / indir
     missing = set()

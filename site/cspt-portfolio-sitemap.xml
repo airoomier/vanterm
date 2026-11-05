@@ -1,20 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1" xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9 http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd http://www.google.com/schemas/sitemap-image/1.1 http://www.google.com/schemas/sitemap-image/1.1/sitemap-image.xsd" xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
 	<url>
-		<loc>https://vanterm.com/product/</loc>
-		<xhtml:link rel="alternate" hreflang="en" href="https://vanterm.com/product/" />
-		<xhtml:link rel="alternate" hreflang="tr" href="https://vanterm.com/tr/product/" />
-		<xhtml:link rel="alternate" hreflang="x-default" href="https://vanterm.com/product/" />
-		<lastmod>2020-03-08T18:40:09+00:00</lastmod>
-	</url>
-	<url>
-		<loc>https://vanterm.com/tr/urun/</loc>
-		<xhtml:link rel="alternate" hreflang="en" href="https://vanterm.com/urun/" />
-		<xhtml:link rel="alternate" hreflang="tr" href="https://vanterm.com/tr/urun/" />
-		<xhtml:link rel="alternate" hreflang="x-default" href="https://vanterm.com/urun/" />
-		<lastmod>2020-03-08T18:40:09+00:00</lastmod>
-	</url>
-	<url>
 		<loc>https://vanterm.com/product/bespoke-dust-collectors-filter-units-for-oem/</loc>
 		<xhtml:link rel="alternate" hreflang="en" href="https://vanterm.com/product/bespoke-dust-collectors-filter-units-for-oem/" />
 		<xhtml:link rel="alternate" hreflang="tr" href="https://vanterm.com/tr/urun/oem-filtre-uniteleri/" />

@@ -15,6 +15,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "site"
 redirects = json.loads((ROOT / "tools" / "redirects.json").read_text()) if (ROOT / "tools" / "redirects.json").exists() else {}
+if (ROOT / "tools" / "redirects-seo.json").exists():
+    redirects.update(json.loads((ROOT / "tools" / "redirects-seo.json").read_text()))
 
 
 def visible_text(h: str) -> str:

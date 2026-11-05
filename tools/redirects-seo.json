@@ -1,0 +1,6 @@
+{
+ "/application/": "/applications/",
+ "/product/": "/products/",
+ "/tr/uygulama-tr/": "/tr/uygulamalar/",
+ "/tr/urun/": "/tr/urunler/"
+}

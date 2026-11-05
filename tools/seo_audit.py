@@ -5,6 +5,7 @@ from html import unescape
 from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent; OUT = ROOT / "site"
 red = json.loads((ROOT / "tools/redirects.json").read_text())
+red.update(json.loads((ROOT / "tools/redirects-seo.json").read_text()))
 pages = {}
 for f in OUT.rglob("index.html"):
     rel = str(f.parent.relative_to(OUT)); u = "/" if rel == "." else "/" + rel + "/"

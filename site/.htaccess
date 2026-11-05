@@ -44,7 +44,9 @@ RewriteRule ^tr/application/(.+)$ /tr/uygulama-tr/$1 [L,R=301]
 RewriteRule ^2019/09/?$ / [L,R=301]
 RewriteRule ^2019/10/?$ / [L,R=301]
 RewriteRule ^2020/03/?$ / [L,R=301]
+RewriteRule ^application/?$ /applications/ [L,R=301]
 RewriteRule ^author/gurere/?$ / [L,R=301]
+RewriteRule ^product/?$ /products/ [L,R=301]
 RewriteRule ^tr/2019/10/?$ /tr/ [L,R=301]
 RewriteRule ^tr/2020/03/?$ /tr/ [L,R=301]
 RewriteRule ^tr/application/cnc\-isleme\-merkezi\-icin\-filtre\-cozumu/?$ /tr/uygulama-tr/cnc-isleme-merkezi-icin-filtre-cozumu/ [L,R=301]
@@ -98,6 +100,8 @@ RewriteRule ^tr/product/sm\-filtre\-uniteleri/?$ /tr/urun/sm-filtre-uniteleri/ [
 RewriteRule ^tr/product/sulu\-on\-filtre/?$ /tr/urun/sulu-on-filtre/ [L,R=301]
 RewriteRule ^tr/product/t\-serisi\-calisma\-masalari/?$ /tr/urun/t-serisi-calisma-masalari/ [L,R=301]
 RewriteRule ^tr/product/vr\-duvara\-montaj\-fanlar/?$ /tr/urun/vr-duvara-montaj-fanlar/ [L,R=301]
+RewriteRule ^tr/urun/?$ /tr/urunler/ [L,R=301]
+RewriteRule ^tr/uygulama\-tr/?$ /tr/uygulamalar/ [L,R=301]
 # YONLENDIRMELER-BITIR
 
 # Sondaki eğik çizgi (WordPress ile aynı adres biçimi)
