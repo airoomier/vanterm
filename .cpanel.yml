@@ -1,7 +1,6 @@
 ---
-# cPanel Git Version Control dağıtım tanımı.
-# "Deploy HEAD Commit" veya deploy/auto-deploy.sh çalıştığında site/ içeriği public_html'e kopyalanır.
+# cPanel Git Version Control: "Deploy HEAD Commit" düğmesi.
+# Hedef klasör ve mod deploy/hedef.conf içinde (demo.vanterm.com veya public_html).
 deployment:
   tasks:
-    - export DEPLOYPATH=$HOME/public_html/
-    - /bin/cp -R site/. $DEPLOYPATH
+    - /bin/bash $HOME/repositories/vanterm/deploy/auto-deploy.sh --force

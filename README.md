@@ -18,15 +18,25 @@ Sunucu şifresi kimseyle paylaşılmaz. Sunucu, GitHub'dan yalnızca okuma yetki
 
 ---
 
-## cPanel kurulumu (bir kez yapılır, ~20 dakika)
+## cPanel kurulumu — önce demo.vanterm.com (bir kez, ~20 dakika)
 
-### 1. Yedek al
-cPanel → **Yedekleme (Backup)** → `public_html` klasörünün ve WordPress veritabanının yedeğini indir.
+Site önce **demo.vanterm.com** adresinde yayınlanır. Mevcut WordPress sitesine (vanterm.com) dokunulmaz.
+Demo, arama motorlarına kapalıdır (robots.txt engeli + `noindex` başlığı). İstenirse şifreyle korunur.
+Hangi adrese yayın yapılacağı `deploy/hedef.conf` dosyasında yazılıdır.
+
+### 1. Alt alan adını aç
+cPanel → **Domains → Create A New Domain**
+- Domain: `demo.vanterm.com`
+- "Share document root" kutusu: **kapalı**
+- Document Root: `demo.vanterm.com` (public_html'in **dışında**, ev dizininde)
+- **Submit**
+
+Ardından cPanel → **SSL/TLS Status → Run AutoSSL**. Demo adresinin sertifikası birkaç dakika içinde gelir.
 
 ### 2. GitHub okuma anahtarı oluştur
 GitHub → sağ üst profil → **Settings → Developer settings → Personal access tokens → Fine-grained tokens → Generate new token**
 - Token name: `vanterm-cpanel`
-- Expiration: istediğin süre (ör. 1 yıl; süre dolunca yenisi gerekir)
+- Expiration: istediğin süre (süre dolunca yenisi gerekir)
 - Repository access: **Only select repositories → airoomier/vanterm**
 - Permissions → Repository permissions → **Contents: Read-only**
 - **Generate token** → çıkan `github_pat_...` değerini kopyala (bir daha gösterilmez).
@@ -39,19 +49,11 @@ cPanel → **Git™ Version Control → Create**
 - Repository Name: `vanterm`
 - **Create**
 
-### 4. WordPress dosyalarını kenara al
-cPanel → **Dosya Yöneticisi** → Ayarlar → "Gizli dosyaları göster" açık.
-1. Ana dizinde (`public_html`'in bir üstü) `wp-yedek` adında klasör oluştur.
-2. `public_html` içindeki her şeyi seç, **ama `.well-known` ve `cgi-bin` klasörlerini seçme**.
-3. **Taşı (Move)** → hedef: `/wp-yedek`.
+### 4. İlk yayın
+Git Version Control → vanterm → **Manage → Pull or Deploy** → **Deploy HEAD Commit**.
+https://demo.vanterm.com açılmalı (İngilizce). Türkçe: https://demo.vanterm.com/tr/
 
-> Site birkaç dakika boş kalır. Bunu trafiğin az olduğu bir saatte yap.
-
-### 5. İlk yayın
-cPanel → **Git Version Control** → vanterm → **Manage → Pull or Deploy** → **Deploy HEAD Commit**.
-Ardından https://vanterm.com açılmalı (İngilizce). Türkçe: https://vanterm.com/tr/
-
-### 6. Otomatik güncelleme (cron)
+### 5. Otomatik güncelleme (cron)
 cPanel → **Cron Jobs** → Common Settings: **Once Per Five Minutes (*/5)**
 Command:
 ```
@@ -59,29 +61,39 @@ Command:
 ```
 **Add New Cron Job**. Dağıtım geçmişi `~/vanterm-deploy.log` dosyasına yazılır.
 
-### 7. Form e-postası
+### 6. Form e-postası
 cPanel → **Email Accounts → Create** → `form@vanterm.com`.
-cPanel → **Email Deliverability** → vanterm.com için SPF ve DKIM "Valid" olmalı (değilse **Repair**). Böylece form mailleri spama düşmez.
+cPanel → **Email Deliverability** → vanterm.com için SPF ve DKIM "Valid" olmalı (değilse **Repair**).
+
+### 7. (İsteğe bağlı) Demoyu şifreyle koru
+cPanel → **Directory Privacy** → `demo.vanterm.com` klasörü → "Password protect this directory" → kullanıcı adı ve şifre oluştur.
+Ardından Git Version Control → **Deploy HEAD Commit** ile bir kez yeniden yayınla. Şifre, sonraki tüm güncellemelerde korunur.
+Firmaya adresle birlikte kullanıcı adı ve şifreyi ver.
 
 ### 8. Kontrol listesi
-- [ ] https://vanterm.com ve https://vanterm.com/tr/ açılıyor
-- [ ] https://www.vanterm.com → https://vanterm.com yönleniyor
+- [ ] https://demo.vanterm.com ve /tr/ açılıyor
 - [ ] Bir ürün sayfasında PDF indirme çalışıyor
-- [ ] İletişim formu (EN ve TR) gönderiliyor ve form@vanterm.com'a mail geliyor
-- [ ] Ürün kaydı formu (EN ve TR) çalışıyor
+- [ ] İletişim ve Ürün Kaydı formları (EN ve TR) gönderiliyor, form@vanterm.com'a mail geliyor
 - [ ] Sağ üstteki arama çalışıyor
-- [ ] https://vanterm.com/sitemap_index.xml açılıyor
-
-### 9. Google Search Console
-Site Haritaları → `https://vanterm.com/sitemap_index.xml` gönder.
+- [ ] https://demo.vanterm.com/robots.txt içinde `Disallow: /` var
 
 ---
+
+## Canlıya geçiş (firma onaylayınca)
+
+1. cPanel → **Yedekleme**: `public_html` ve WordPress veritabanı yedeği.
+2. Dosya Yöneticisi (gizli dosyalar açık): ev dizininde `wp-yedek` klasörü aç. `public_html` içindeki her şeyi **`.well-known` ve `cgi-bin` hariç** oraya taşı.
+3. Claude'a "canlıya al" de. Claude `deploy/hedef.conf` dosyasını `HEDEF="public_html"`, `MOD="canli"` yapıp gönderir. En geç 5 dakika içinde site vanterm.com'da yayında olur.
+4. Kontrol: https://vanterm.com, https://www.vanterm.com → vanterm.com yönlenmesi, formlar, PDF'ler, https://vanterm.com/sitemap_index.xml
+5. Google Search Console → Site Haritaları → `https://vanterm.com/sitemap_index.xml` gönder.
+6. Demo alt alan adı istenirse cPanel → Domains'den silinir.
 
 ## Güncelleme yapmak
 
 `site/` içindeki HTML dosyaları doğrudan düzenlenir, commit edilip `main` dalına gönderilir. En geç 5 dakika içinde canlıya çıkar.
 
 - Sunucudan bir dosya silinecekse yolunu `deploy/silinecekler.txt` dosyasına ekle (kopyalama işlemi dosya silmez).
+- Yayın adresi (demo / canlı): `deploy/hedef.conf`.
 - Form alıcısı: `site/form-gonder.php` içindeki `ALICI`.
 - Form başarı/hata metinleri: `site/form-ayarlar.php`.
 - Değişiklikten sonra kontrol: `python3 tools/check.py` (kırık iç link taraması).
