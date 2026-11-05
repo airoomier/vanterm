@@ -402,6 +402,9 @@ def main():
             rel = f.relative_to(extra)
             path = page_path(rel) if f.name == "index.html" else "/" + str(rel)
             h = process_html(f.read_text(encoding="utf-8", errors="replace"), path, pages)
+            if str(rel) == "404.html":
+                # Sunucu tüm 404'lerde bu sayfayı gösterir; Türkçe adreslerde Türkçe 404'e geç
+                h = h.replace("<head>", '<head>\n<script>if(/^\\/tr(\\/|$)/.test(location.pathname))location.replace("/tr/404.html");</script>', 1)
             dest = OUT / rel
             dest.parent.mkdir(parents=True, exist_ok=True)
             dest.write_text(h, encoding="utf-8")

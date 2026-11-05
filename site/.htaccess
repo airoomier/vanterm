@@ -3,9 +3,6 @@ Options -Indexes
 DirectoryIndex index.html
 AddDefaultCharset UTF-8
 ErrorDocument 404 /404.html
-<If "%{REQUEST_URI} =~ m#^/tr/#">
-  ErrorDocument 404 /tr/404.html
-</If>
 
 <IfModule mod_rewrite.c>
 RewriteEngine On
