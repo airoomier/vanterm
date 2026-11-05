@@ -57,5 +57,10 @@
   window.addEventListener('resize', function () { clearTimeout(t); t = setTimeout(equalize, 150); });
   window.addEventListener('load', equalize);
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(equalize);
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mark); else mark();
+  function year() {
+    var y = String(new Date().getFullYear());
+    document.querySelectorAll('.vt-yil').forEach(function (e) { e.textContent = y; });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { mark(); year(); });
+  else { mark(); year(); }
 })();

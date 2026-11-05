@@ -25,7 +25,9 @@ def visible_text(h: str) -> str:
     t = re.sub(r"(https?:)?//(www\.)?demo\.seowpclub\.com", "", t)
     t = t.replace("https://vanterm.com", "")
     t = re.sub(r"\s+", " ", t).strip()
-    t = re.sub(r"\s?0 Comment\b", "", t)  # yazı kutularındaki yorum satırı bilerek kaldırıldı
+    t = re.sub(r"\s?0 Comment\b", "", t)
+    t = re.sub(r"Copyright © \d{4}", "Copyright © YIL", t)          # telif yılı otomatik
+    t = t.replace("Web Design - SEO", "Web Design - SEO")  # yazı kutularındaki yorum satırı bilerek kaldırıldı
     return t
 
 

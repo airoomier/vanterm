@@ -185,3 +185,26 @@ body .cspt-ihbox.cspt-ihbox-style-hsbox .cspt-ihbox-heading .vc_custom_heading {
     padding-left: 12px !important; padding-right: 12px !important;
   }
 }
+
+/* Dar alandaki 4'lü kart ızgaraları (yan sütunlu sayfalar: "Related Applications / İlişkili Uygulamalar"):
+   ızgara 960px'ten darsa kartlar 2'li dizilir, başlıklar kelime kelime aşağı akmaz */
+.creativesplanet-element-viewtype-row-column > .creativesplanet-element-inner,
+.cspt-service-related, .cspt-portfolio-related, .cspt-post-related {
+  container-type: inline-size; container-name: vt-izgara;
+}
+@container vt-izgara (max-width: 960px) {
+  .cspt-element-posts-wrapper > .cspt-ele.col-lg-3 { flex: 0 0 50%; max-width: 50%; }
+}
+
+/* Onay işaretli maddeler: işaret metnin solunda, ilk satırla aynı hizada */
+.creativesplanet-ul-list.cspt-ul-type-icon li:has(> p) {
+  display: flex; align-items: flex-start; gap: 12px;
+}
+.creativesplanet-ul-list.cspt-ul-type-icon li:has(> p) > i {
+  flex: 0 0 auto; position: static; margin: 0; line-height: inherit;
+  padding-top: 0.3em;
+}
+.creativesplanet-ul-list.cspt-ul-type-icon li:has(> p) > p { margin: 0; flex: 1 1 auto; }
+
+/* Uygulama kartlarındaki mavi üçgen kaldırıldı (kaydırınca sabit menünün üstüne biniyordu) */
+.cspt-service-style-1 .cspt-service-icon { display: none !important; }

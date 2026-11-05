@@ -28,6 +28,8 @@ SITE = "https://vanterm.com"
 SRC_HOST = "www.demo.seowpclub.com"
 SRC_URL = "https://" + SRC_HOST
 FALLBACK_URL = "https://vanterm.com"
+import datetime
+YEAR = datetime.date.today().year
 ASSET_EXT = r"(?:css|js|png|jpe?g|gif|svg|webp|avif|woff2?|ttf|eot|otf|ico|pdf|mp4|webm)"
 
 # Bizim yazdığımız, build'in silmemesi gereken dosyalar
@@ -184,6 +186,12 @@ def process_html(h: str, path: str, pages: set) -> str:
     h = re.sub(r'\s*<div class="cspt-meta-date-wrapper cspt-meta-line">\s*<i class="cspt-base-icon-comment-empty"></i>.*?</div>',
                "", h, flags=re.S)
 
+    # Alt bilgi: telif yılı her yıl kendiliğinden güncellenir (statik değer build yılı, JS güncel yılı yazar)
+    h = re.sub(r"Copyright © \d{4} Vanterm", f'Copyright © <span class="vt-yil">{YEAR}</span> Vanterm', h)
+    # Alt bilgi: tasarım/SEO bağlantısı tek link, nofollow (Google: sitelere dağıtılmış alt bilgi linkleri nofollow olmalı)
+    h = re.sub(r'<a href="https://www\.seouzmaniantalya\.com/" target="_blank">Web Design</a>\s*-\s*<a href="https://seowpclub\.com/" target="_blank">SEO</a>',
+               '<a href="https://seowpclub.com/" target="_blank" rel="nofollow noopener">Web Design - SEO</a>', h)
+
     # Düzen standardı CSS'i (tema CSS'lerinden sonra)
     if "vanterm-duzen.css" not in h and "</head>" in h:
         h = h.replace("</head>", '<link rel="stylesheet" href="/assets/vanterm-duzen.css" media="all" />\n</head>', 1)
@@ -195,6 +203,19 @@ def process_html(h: str, path: str, pages: set) -> str:
         h = remove_wpforms_scripts(h)
         if "vanterm-forms.js" not in h:
             h = h.replace("</body>", '<script src="/assets/vanterm-forms.js" defer></script>\n</body>', 1)
+    return version_assets(h)
+
+
+def asset_version(name: str) -> str:
+    """Kendi dosyalarımız için sürüm etiketi (içerik değişince değişir → tarayıcı önbelleği yenilenir)."""
+    import hashlib
+    f = OUT / "assets" / name
+    return hashlib.md5(f.read_bytes()).hexdigest()[:8] if f.exists() else "1"
+
+
+def version_assets(h: str) -> str:
+    for name in ("vanterm-duzen.css", "vanterm-duzen.js", "vanterm-forms.js", "vanterm-search.js"):
+        h = re.sub(r'/assets/' + re.escape(name) + r'(\?v=[0-9a-f]+)?"', f'/assets/{name}?v={asset_version(name)}"', h)
     return h
 
 
