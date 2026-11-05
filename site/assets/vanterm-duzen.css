@@ -107,3 +107,14 @@
 @media (max-width: 767px) {
   :root { --vt-baslik: 20px; }
 }
+
+/* Mavi hover arka planlı uygulama kutuları: üzerine gelince başlık ve link beyaz */
+.creativesplanet-ele.cspt-service-style-2:hover .cspt-service-title a,
+.creativesplanet-ele.cspt-service-style-2:hover .cspt-service-title a:hover,
+.creativesplanet-ele.cspt-service-style-2:hover .cspt-service-btn a.vc_btn3,
+.creativesplanet-ele.cspt-service-style-2:hover .cspt-service-btn a.vc_btn3:hover {
+  color: #fff !important;
+}
+.creativesplanet-ele.cspt-service-style-2:hover .cspt-service-btn a.vc_btn3:after {
+  background-color: #fff !important;
+}
