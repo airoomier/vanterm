@@ -31,10 +31,7 @@ def exists(url: str) -> bool:
     p = urllib.parse.unquote(url.split("#")[0].split("?")[0])
     if not p or p == "/":
         return True
-    if p in redirects or p.rstrip("/") + "/" in redirects:
-        return True
-    if re.match(r"^/(tr/)?(product|application)/", p) or re.match(r"^/(tr/)?(author/|\d{4}/)", p):
-        return True  # .htaccess desen yönlendirmeleri
+    # Yönlendirmeye giden link artık hata sayılır (yerelde çalışmaz, sunucuda fazladan 301 olur)
     f = OUT / p.lstrip("/")
     return f.is_file() or (f / "index.html").is_file()
 
@@ -45,6 +42,9 @@ def main():
     for f in sorted(OUT.rglob("*.html")):
         h = f.read_text(encoding="utf-8", errors="replace")
         rel = "/" + str(f.relative_to(OUT))
+        page = rel[:-len("index.html")] if rel.endswith("/index.html") else rel
+        if page in redirects:
+            continue  # eski adres için yönlendirme sayfası
         if raw:
             rf = raw / f.relative_to(OUT)
             if rf.exists():

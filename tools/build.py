@@ -91,6 +91,42 @@ def remove_wpforms_scripts(h: str) -> str:
     return h
 
 
+REDIRECTS = {}
+
+
+def final_url(p: str, pages: set) -> str:
+    """Orijinal sitede 301 ile yönlenen adresi son hedefe çevirir (zincirleri de izler)."""
+    seen = set()
+    while p not in seen:
+        seen.add(p)
+        if p in REDIRECTS:
+            p = REDIRECTS[p]
+            continue
+        m = re.match(r"^/tr/product/(.+)$", p) or None
+        if m and "/tr/urun/" + m.group(1) in pages:
+            p = "/tr/urun/" + m.group(1)
+            continue
+        m = re.match(r"^/tr/application/(.+)$", p)
+        if m and "/tr/uygulama-tr/" + m.group(1) in pages:
+            p = "/tr/uygulama-tr/" + m.group(1)
+            continue
+        m = re.match(r"^/(tr/)?(?:author/[^/]+/|\d{4}/(?:\d{2}/)?)$", p)
+        if m:
+            p = "/" + (m.group(1) or "")
+            continue
+        break
+    return p
+
+
+def resolve_links(h: str, pages: set) -> str:
+    def rep(m):
+        url = m.group(2)
+        path, sep, frag = url.partition("#")
+        new = final_url(path, pages)
+        return m.group(1) + new + sep + frag + m.group(3)
+    return re.sub(r'(href=")(/[^"]*)(")', rep, h)
+
+
 def lang_of(path: str) -> str:
     return "tr" if path.startswith("/tr/") or path == "/tr/" else "en"
 
@@ -136,6 +172,7 @@ def process_html(h: str, path: str, pages: set) -> str:
     # Diğer her şey kök-göreli
     h = to_rel(h)
     h = strip_qs(h)
+    h = resolve_links(h, pages)
 
     # Arama formu: statik arama sayfası
     h = re.sub(r'(<form[^>]*class="search-form"[^>]*action=")/(")', r"\1/search/\2", h)
@@ -288,6 +325,7 @@ def main():
     rfile = ROOT / "tools" / "redirects.json"
     if rfile.exists():
         redirects = json.loads(rfile.read_text(encoding="utf-8"))
+    REDIRECTS.update(redirects)
     html_files = [p for p in src.rglob("index.html") if "?" not in str(p) and "wp-content" not in p.parts
                   and page_path(p.relative_to(src)) not in redirects]
     pages = {page_path(p.relative_to(src)) for p in html_files}
@@ -336,6 +374,22 @@ def main():
             dest = OUT / rel
             dest.parent.mkdir(parents=True, exist_ok=True)
             dest.write_text(h, encoding="utf-8")
+
+    # 4a) eski adresler için yönlendirme sayfaları (sunucuda .htaccess 301 önce çalışır;
+    #     bu sayfalar yerel önizlemede ve .htaccess'in çalışmadığı durumda devreye girer)
+    for src_path, dst in redirects.items():
+        dst = final_url(dst, pages)
+        d = OUT / src_path.strip("/") / "index.html"
+        if d.exists():
+            continue
+        d.parent.mkdir(parents=True, exist_ok=True)
+        d.write_text(
+            '<!DOCTYPE html><html><head><meta charset="utf-8">'
+            '<meta name="robots" content="noindex, follow">'
+            f'<link rel="canonical" href="{SITE}{dst}">'
+            f'<meta http-equiv="refresh" content="0; url={dst}">'
+            f'<script>location.replace("{dst}"+location.search+location.hash)</script>'
+            f'</head><body><a href="{dst}">{SITE}{dst}</a></body></html>\n', encoding="utf-8")
 
     # 4b) site haritaları (orijinal Yoast haritaları, alan adı değiştirilerek)
     for f in (ROOT / "tools" / "sitemaps").glob("*.xml"):
