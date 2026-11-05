@@ -5,8 +5,14 @@
    ========================================================================== */
 
 :root {
-  --vt-baslik: 22px;        /* kutu başlıkları */
-  --vt-baslik-lh: 1.3;
+  /* Akışkan yazı ölçeği: 390px (mobil) ile 1440px (masaüstü) arasında ekran genişliğine göre büyür.
+     clamp(en küçük, akışkan değer, en büyük) */
+  --vt-h1: clamp(26px, 0.75vw + 23px, 34px);   /* ürün ana başlığı, sayfa başlığı */
+  --vt-h2: clamp(21px, 0.55vw + 18px, 27px);   /* bölüm başlıkları (Advantages, İlişkili Uygulamalar...) */
+  --vt-h3: clamp(18px, 0.35vw + 16px, 22px);
+  --vt-h4: clamp(16px, 0.2vw + 15px, 19px);
+  --vt-kutu: clamp(17px, 0.3vw + 15px, 21px);  /* ikonlu kutu başlıkları (Products, Download...) */
+  --vt-govde: clamp(15px, 0.1vw + 14.5px, 16px);
   --vt-link: 13px;          /* Read More / Details / Download */
   --vt-mavi: #0fb0ee;       /* temanın ana rengi */
   --vt-koyu: #1e2227;
@@ -48,17 +54,19 @@
 .creativesplanet-ele .cspt-service-btn { margin-top: auto; }
 .creativesplanet-ele-portfolio .cspt-content-wrapper { flex: 1 1 auto; }
 
-/* İkonlu bilgi kutuları (Case Study Facts, Download vb.): WPBakery satırında eşit boy */
-.vc_row:has(> .wpb_column .cspt-ihbox),
-.vc_inner:has(> .wpb_column .cspt-ihbox) { display: flex; flex-wrap: wrap; }
-.vc_row:has(> .wpb_column .cspt-ihbox)::before, .vc_row:has(> .wpb_column .cspt-ihbox)::after,
-.vc_inner:has(> .wpb_column .cspt-ihbox)::before, .vc_inner:has(> .wpb_column .cspt-ihbox)::after { content: none; }
-.wpb_column:has(.cspt-ihbox) { display: flex; }
-.wpb_column:has(.cspt-ihbox) > .vc_column-inner { display: flex; flex-direction: column; width: 100%; }
-.wpb_column:has(.cspt-ihbox) > .vc_column-inner > .wpb_wrapper { display: flex; flex-direction: column; flex: 1 1 auto; }
-.wpb_column:has(.cspt-ihbox) > .vc_column-inner > .wpb_wrapper > .cspt-ihbox { flex: 1 1 auto; display: flex; flex-direction: column; }
-.cspt-ihbox > .cspt-ihbox-contents { display: flex; flex-direction: column; flex: 1 1 auto; }
-.cspt-ihbox .cspt-ihbox-btn { margin-top: auto; padding-top: 12px; }
+/* İkonlu bilgi kutuları (Case Study Facts, Download, özellik kutuları): aynı satırda eşit boy.
+   vanterm-duzen.js, yalnızca kutu (ve boşluk öğesi) içeren sütunlara .vt-esit, satırına .vt-esit-satir ekler;
+   başlık/metin içeren sütunların yerleşimi değişmez. */
+.vt-esit-satir { display: flex; flex-wrap: wrap; }
+.vt-esit-satir::before, .vt-esit-satir::after { content: none; }
+.vt-esit { display: flex; }
+.vt-esit > .vc_column-inner { display: flex; flex-direction: column; width: 100%; }
+.vt-esit > .vc_column-inner > .wpb_wrapper { display: flex; flex-direction: column; flex: 1 1 auto; }
+.vt-esit > .vc_column-inner > .wpb_wrapper > .cspt-ihbox { flex: 1 1 auto; }
+/* Linkli kutularda link dibe */
+.vt-esit .cspt-ihbox:has(.cspt-ihbox-btn) { display: flex; flex-direction: column; }
+.vt-esit .cspt-ihbox:has(.cspt-ihbox-btn) > .cspt-ihbox-contents { display: flex; flex-direction: column; flex: 1 1 auto; }
+.vt-esit .cspt-ihbox-btn { margin-top: auto; padding-top: 12px; }
 
 /* ---------- 2. Tipografi standardı ---------- */
 
@@ -66,8 +74,8 @@
 .creativesplanet-ele .cspt-service-title,
 .creativesplanet-ele .cspt-portfolio-title,
 .creativesplanet-ele .cspt-post-title {
-  font-size: var(--vt-baslik) !important;
-  line-height: var(--vt-baslik-lh) !important;
+  font-size: clamp(16px, 7.2cqi, 20px) !important;   /* kart genişliğine göre: dar kartta 16px, geniş kartta 20px */
+  line-height: 1.35 !important;
   font-weight: 700;
   text-align: left;
   word-break: normal;
@@ -104,9 +112,7 @@
 /* Yazı kutularında tarih satırı (yorum satırı kaldırıldı) */
 .creativesplanet-ele-blog .cspt-meta-container { margin-bottom: 10px; }
 
-@media (max-width: 767px) {
-  :root { --vt-baslik: 20px; }
-}
+
 
 /* Mavi hover arka planlı uygulama kutuları: üzerine gelince başlık ve link beyaz */
 .creativesplanet-ele.cspt-service-style-2:hover .cspt-service-title a,
@@ -117,4 +123,65 @@
 }
 .creativesplanet-ele.cspt-service-style-2:hover .cspt-service-btn a.vc_btn3:after {
   background-color: #fff !important;
+}
+
+
+/* ---------- 3. Ekran genişliğine göre yazı ölçeği (tüm site) ---------- */
+
+/* Kartlar kendi genişliklerini ölçü alır (başlıklar cqi birimiyle) */
+article.creativesplanet-ele { container-type: inline-size; }
+
+/* Tema varsayılanları (h1 34, h2 30, h3 26, h4 20px sabit) yerine akışkan ölçek */
+main h1, .site-content h1 { font-size: var(--vt-h1); line-height: 1.25; }
+main h2, .site-content h2 { font-size: var(--vt-h2); line-height: 1.3; }
+main h3, .site-content h3 { font-size: var(--vt-h3); line-height: 1.35; }
+main h4, .site-content h4 { font-size: var(--vt-h4); line-height: 1.4; }
+
+/* Sayfa içine sabit yazılmış başlık boyutları (WPBakery: 40px ürün başlıkları, 30px bölüm başlıkları) */
+.vc_custom_heading[style*="font-size: 40px"], .vc_custom_heading[style*="font-size:40px"] {
+  font-size: var(--vt-h1) !important; line-height: 1.25 !important;
+}
+.vc_custom_heading[style*="font-size: 30px"], .vc_custom_heading[style*="font-size:30px"] {
+  font-size: var(--vt-h2) !important; line-height: 1.3 !important;
+}
+
+/* Üst bant sayfa başlığı */
+body .cspt-title-bar-wrapper .cspt-tbar-title { font-size: var(--vt-h1) !important; line-height: 1.25 !important; }
+
+/* İkonlu kutu başlıkları */
+body .cspt-ihbox.cspt-ihbox:not(.cspt-ihbox-style-hsbox) .cspt-ihbox-heading h2,
+body .cspt-ihbox.cspt-ihbox:not(.cspt-ihbox-style-hsbox) .cspt-ihbox-heading h4,
+body .cspt-ihbox.cspt-ihbox:not(.cspt-ihbox-style-hsbox) .cspt-ihbox-heading .vc_custom_heading {
+  font-size: var(--vt-kutu) !important; line-height: 1.3 !important;
+}
+
+/* Gövde metni */
+main p, main li, .site-content p, .site-content li { font-size: var(--vt-govde); }
+
+/* Büyük bölüm başlıkları (ana sayfa: INFORMATION CENTER, APPLICATIONS... — temanın başlık kutuları) */
+body .cspt-ihbox.cspt-ihbox-style-hsbox .cspt-ihbox-heading h2,
+body .cspt-ihbox.cspt-ihbox-style-hsbox .cspt-ihbox-heading .vc_custom_heading {
+  font-size: clamp(22px, 0.8vw + 18px, 30px) !important; line-height: 1.25 !important;
+}
+
+/* Alt alta birden çok kutu olan sütunlar: kutu yüksekliğini vanterm-duzen.js eşitler; link varsa dibe */
+.vt-esit-kutu:has(.cspt-ihbox-btn) { display: flex; flex-direction: column; }
+.vt-esit-kutu:has(.cspt-ihbox-btn) > .cspt-ihbox-contents { display: flex; flex-direction: column; flex: 1 1 auto; }
+.vt-esit-kutu .cspt-ihbox-btn { margin-top: auto; }
+
+/* Dar kartlar (ör. yan sütunlu sayfalardaki "İlişkili Uygulamalar"): iç boşluk kart genişliğiyle küçülür */
+@container (max-width: 300px) {
+  .creativesplanet-box-content-inner,
+  .cspt-blogbox-style-1 .creativesplanet-box-content,
+  .cspt-blogbox-style-3 .creativesplanet-box-content {
+    padding-left: 18px !important; padding-right: 18px !important;
+  }
+  .cspt-service-style-1 .creativesplanet-box-content-inner { padding-top: 24px !important; }
+}
+@container (max-width: 210px) {
+  .creativesplanet-box-content-inner,
+  .cspt-blogbox-style-1 .creativesplanet-box-content,
+  .cspt-blogbox-style-3 .creativesplanet-box-content {
+    padding-left: 12px !important; padding-right: 12px !important;
+  }
 }

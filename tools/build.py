@@ -187,6 +187,8 @@ def process_html(h: str, path: str, pages: set) -> str:
     # Düzen standardı CSS'i (tema CSS'lerinden sonra)
     if "vanterm-duzen.css" not in h and "</head>" in h:
         h = h.replace("</head>", '<link rel="stylesheet" href="/assets/vanterm-duzen.css" media="all" />\n</head>', 1)
+    if "vanterm-duzen.js" not in h and "</body>" in h:
+        h = h.replace("</body>", '<script src="/assets/vanterm-duzen.js"></script>\n</body>', 1)
 
     # Formlar
     if "wpforms-form" in h:
