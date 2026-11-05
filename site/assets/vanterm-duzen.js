@@ -2,6 +2,7 @@
    - Sütunda tek kutu varsa (+ boşluk öğeleri): sütuna .vt-esit, satırına .vt-esit-satir eklenir; eşitlemeyi CSS yapar.
    - Sütunda alt alta birden fazla kutu varsa: aynı satırdaki sütunlarda 1., 2., ... kutular kendi aralarında
      eşitlenir (min-height). Pencere boyutu değişince yeniden hesaplanır.
+   Kutunun altında logo görseli varsa kutu uzar, logo sütunun dibinde kalır.
    Başlık/metin içeren sütunlara dokunulmaz. */
 (function () {
   var multiRows = [];
@@ -11,9 +12,12 @@
     if (!kids.length) return null;
     var boxes = kids.filter(function (k) { return k.classList.contains('cspt-ihbox'); });
     var ok = kids.every(function (k) {
-      return k.classList.contains('cspt-ihbox') || k.classList.contains('vc_empty_space');
+      return k.classList.contains('cspt-ihbox') || k.classList.contains('vc_empty_space') ||
+             k.classList.contains('wpb_single_image');   // ör. Müşteri kutusunun altındaki firma logosu
     });
     if (!ok || !boxes.length) return null;
+    // Logo yalnızca tek kutulu sütunda kabul edilir (kutu uzar, logo dipte kalır)
+    if (boxes.length > 1 && kids.some(function (k) { return k.classList.contains('wpb_single_image'); })) return null;
     if (boxes.some(function (b) { return b.classList.contains('cspt-ihbox-style-hsbox'); })) return null;
     return boxes;
   }

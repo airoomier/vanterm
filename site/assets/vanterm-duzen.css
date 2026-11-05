@@ -208,3 +208,7 @@ body .cspt-ihbox.cspt-ihbox-style-hsbox .cspt-ihbox-heading .vc_custom_heading {
 
 /* Uygulama kartlarındaki mavi üçgen kaldırıldı (kaydırınca sabit menünün üstüne biniyordu) */
 .cspt-service-style-1 .cspt-service-icon { display: none !important; }
+
+/* Kutu + logo sütunu (ör. Müşteri kutusu altında firma logosu): logo dipte, sütun komşularıyla aynı yerde biter */
+.vt-esit > .vc_column-inner > .wpb_wrapper > .wpb_single_image:last-child { margin-bottom: 0; }
+.vt-esit > .vc_column-inner > .wpb_wrapper > .wpb_single_image { flex: 0 0 auto; }
