@@ -8,11 +8,13 @@ ErrorDocument 404 /404.html
 RewriteEngine On
 
 # HTTPS ve www'suz tek adres (vanterm.com ve demo.vanterm.com için ortak)
+# HTTPS-BASLA (deploy/hedef.conf içinde HTTPS="hayir" ise dağıtım bu bloğu çıkarır)
 RewriteCond %{HTTP_HOST} ^www\.(.+)$ [NC]
 RewriteRule ^ https://%1%{REQUEST_URI} [L,R=301]
 RewriteCond %{HTTPS} off
 RewriteCond %{HTTP:X-Forwarded-Proto} !https
 RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+# HTTPS-BITIR
 
 # Eski WordPress arama adresleri -> statik arama
 RewriteCond %{QUERY_STRING} (^|&)s=

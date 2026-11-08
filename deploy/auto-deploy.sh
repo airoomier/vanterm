@@ -20,8 +20,9 @@ REMOTE=$(git rev-parse origin/main)
 git reset -q --hard origin/main
 
 # Ayarlar (güncel commit'ten)
-HEDEF="demo.vanterm.com"; MOD="demo"
+HEDEF="demo.vanterm.com"; MOD="demo"; HTTPS="evet"
 [ -f deploy/hedef.conf ] && . deploy/hedef.conf
+[ "$MOD" = "canli" ] && HTTPS="evet"   # canlı sitede HTTPS her zaman açık
 case "$HEDEF" in ""|/*|*..*) echo "$(date '+%F %T') geçersiz HEDEF: $HEDEF" >> "$LOG"; exit 1;; esac
 TARGET="$HOME/$HEDEF"
 [ -d "$TARGET" ] || { echo "$(date '+%F %T') hedef klasör yok: $TARGET" >> "$LOG"; exit 1; }
@@ -37,6 +38,11 @@ if [ -f "$TARGET/.htaccess" ]; then
 fi
 
 /bin/cp -R site/. "$TARGET/"
+
+if [ "$HTTPS" = "hayir" ]; then
+  # SSL sertifikası olmayan demo: HTTPS yönlendirmesini ve HSTS başlığını çıkar
+  sed -i '/# HTTPS-BASLA/,/# HTTPS-BITIR/d; /Strict-Transport-Security/d' "$TARGET/.htaccess"
+fi
 
 if [ -n "$KORU" ]; then
   { echo ""; echo "$KORU"; } >> "$TARGET/.htaccess"
@@ -72,4 +78,4 @@ if [ "$MOD" = "demo" ]; then
   } >> "$TARGET/.htaccess"
 fi
 
-echo "$(date '+%F %T') dağıtıldı -> $HEDEF ($MOD): $(git log -1 --format='%h %s')" >> "$LOG"
+echo "$(date '+%F %T') dağıtıldı -> $HEDEF ($MOD, https=$HTTPS): $(git log -1 --format='%h %s')" >> "$LOG"
