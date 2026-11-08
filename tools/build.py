@@ -218,6 +218,7 @@ def process_html(h: str, path: str, pages: set) -> str:
             h = h.replace("</body>", '<script src="/assets/vanterm-forms.js" defer></script>\n</body>', 1)
     h = add_alts(h, path)
     h = linkify_contacts(h)
+    h = optimize_perf(h, path)
     for src_p, dst_p in REDIRECTS.items():
         h = h.replace(f'{SITE}{src_p}"', f'{SITE}{final_url(dst_p, pages)}"')
         h = h.replace(f'{SITE.replace("/", chr(92) + "/")}{src_p.replace("/", chr(92) + "/")}"',
@@ -343,6 +344,264 @@ def write_llms(pages_html: dict):
                    exclude=("/about-us/", "/products/", "/applications/", "/info-center/", "/contact-us/", "/product-registration/", "/privacy-policy/"))
     out += ["\n## Türkçe\n"] + [f"- [{info(p)[0]}]({SITE}{p})" for p in ("/tr/", "/tr/hakkimizda/", "/tr/urunler/", "/tr/uygulamalar/", "/tr/bilgi-merkezi/", "/tr/iletisim/") if p in pages_html]
     (OUT / "llms.txt").write_text("\n".join(out) + "\n", encoding="utf-8")
+
+
+# ---------------------------------------------------------------- performans (PageSpeed)
+
+FONTS_CSS = ROOT / "site" / "assets" / "fonts" / "fonts.css"
+ASYNC_CSS = ("magnific-popup.css", "balloon.min.css", "font-awesome/css/all.min.css", "v4-shims.min.css",
+             "font-awesome/css/font-awesome.min.css")
+YT_EMBED_RE = re.compile(r'<iframe\b[^>]*\bsrc="https://www\.youtube(?:-nocookie)?\.com/embed/([\w-]{6,})[^"]*"[^>]*>\s*</iframe>', re.I)
+
+
+def make_webp(src: Path):
+    try:
+        from PIL import Image
+    except ImportError:
+        print("Pillow yok, WebP atlandı"); return
+    n = 0
+    for f in list(src.rglob("*")):
+        clean = f.name.split("?")[0]
+        if Path(clean).suffix.lower() not in (".jpg", ".jpeg", ".png") or not f.is_file():
+            continue
+        w = f.with_name(clean + ".webp")
+        if w.exists() or f.stat().st_size < 4000:
+            continue
+        try:
+            import io
+            im = Image.open(f)
+            if im.mode in ("P", "LA", "RGBA", "PA") or "transparency" in im.info:
+                im = im.convert("RGBA")
+                if im.getchannel("A").getextrema()[0] == 255:      # aslında saydam değil
+                    im = im.convert("RGB")
+            if im.mode == "RGBA":
+                adaylar = []
+                for kw in (dict(lossless=True, method=6), dict(quality=85, alpha_quality=90, method=6)):
+                    b = io.BytesIO(); im.save(b, "WEBP", **kw); adaylar.append(b.getvalue())
+                w.write_bytes(min(adaylar, key=len))
+            else:
+                im.convert("RGB").save(w, "WEBP", quality=80, method=6)
+            if w.stat().st_size > f.stat().st_size * 0.9:   # kazanç yoksa tutma
+                w.unlink(); w.write_bytes(b"")  # boş işaret dosyası: tekrar denenmesin
+            n += 1
+        except Exception:
+            pass
+    print(f"webp üretildi/denendi: {n}")
+
+
+CSS_BUNDLES = {}
+
+
+def bundle_css(h: str) -> str:
+    """Engelleyici yerel CSS dosyalarını sırasıyla tek dosyada birleştirir (istek sayısı ~20 → 1).
+    Satır içi <style> blokları paketin hemen ardından, orijinal sıralarıyla kalır."""
+    head_end = h.find("</head>")
+    head = h[:head_end]
+    links = list(re.finditer(r"<link rel='stylesheet'[^>]*href='(/[^']+\.css)'[^>]*media='all'[^>]*/?>\s*", head))
+    links = [m for m in links if "onload=" not in m.group(0)]
+    if len(links) < 2:
+        return h
+    files = [m.group(1) for m in links]
+    key = "|".join(files)
+    if key not in CSS_BUNDLES:
+        import hashlib
+        parts = []
+        for f in files:
+            p = OUT / f.lstrip("/")
+            if not p.exists():
+                return h
+            css = p.read_text(encoding="utf-8", errors="replace")
+            base = f.rsplit("/", 1)[0] + "/"
+            css = re.sub(r"url\(\s*(['\"]?)(?!data:|https?:|//|/|#)([^'\")]+)\1\s*\)",
+                         lambda m: "url(" + m.group(1) + urllib.parse.urljoin(base, m.group(2)) + m.group(1) + ")", css)
+            css = re.sub(r"@charset[^;]+;", "", css)
+            parts.append(f"/* {f} */\n{css}")
+        data = "@charset \"UTF-8\";\n" + "\n".join(parts)
+        name = "bundle-" + hashlib.md5(data.encode()).hexdigest()[:10] + ".css"
+        (OUT / "assets" / name).write_text(data, encoding="utf-8")
+        CSS_BUNDLES[key] = name
+    name = CSS_BUNDLES[key]
+    first = links[0]
+    out = head[:first.start()] + f"<link rel='stylesheet' id='vt-bundle-css' href='/assets/{name}' media='all' />\n"
+    pos = first.end()
+    for m in links[1:]:
+        out += head[pos:m.start()]
+        pos = m.end()
+    out += head[pos:]
+    return out + h[head_end:]
+
+
+def critical_css(html_by_path: dict):
+    import hashlib, tempfile
+    node_mods = ROOT / "tools" / "node_modules"
+    if not (node_mods / "purgecss").exists() or shutil.which("node") is None:
+        print("purgecss yok: kritik CSS atlandı (cd tools && npm i)"); return
+    crit_dir = OUT / "assets" / "crit"
+    if crit_dir.exists():
+        shutil.rmtree(crit_dir)
+    crit_dir.mkdir(parents=True)
+    for old in (OUT / "assets").glob("full-*.css"):
+        old.unlink()
+    duzen = (OUT / "assets" / "vanterm-duzen.css").read_text(encoding="utf-8")
+    full_names, jobs, tmp = {}, [], Path(tempfile.mkdtemp())
+    for path, h in html_by_path.items():
+        m = re.search(r"<link rel='stylesheet' id='vt-bundle-css' href='/assets/(bundle-[0-9a-f]+\.css)' media='all' />", h)
+        if not m:
+            continue
+        b = m.group(1)
+        if b not in full_names:
+            data = (OUT / "assets" / b).read_text(encoding="utf-8") + "\n/* vanterm-duzen.css */\n" + duzen
+            name = "full-" + hashlib.md5(data.encode()).hexdigest()[:10] + ".css"
+            (OUT / "assets" / name).write_text(data, encoding="utf-8")
+            full_names[b] = name
+        page_html = tmp / (hashlib.md5(path.encode()).hexdigest() + ".html")
+        page_html.write_text(h, encoding="utf-8")
+        jobs.append({"css": str(OUT / "assets" / full_names[b]), "html": str(page_html),
+                     "out": str(tmp / (page_html.stem + ".css")), "path": path, "bundle": b})
+    # Tam paketleri de sadeleştir: herhangi bir sayfada veya herhangi bir JS dosyasında geçen kurallar kalır
+    all_html = [str(p) for p in tmp.glob("*.html")]
+    js_files = [str(p) for p in OUT.rglob("*.js") if p.stat().st_size < 600_000]
+    full_jobs = [{"css": str(OUT / "assets" / n), "html": all_html + js_files, "out": str(OUT / "assets" / n)}
+                 for n in set(full_names.values())]
+    ff = tmp / "full.json"; ff.write_text(json.dumps(full_jobs), encoding="utf-8")
+    r = subprocess.run(["node", str(ROOT / "tools" / "purge.js"), str(ff)], env={**os.environ, "NODE_PATH": str(node_mods)},
+                       capture_output=True, text=True)
+    if r.returncode != 0:
+        print("tam paket sadeleştirme atlandı:", r.stderr[-300:])
+    jf = tmp / "jobs.json"; jf.write_text(json.dumps(jobs), encoding="utf-8")
+    r = subprocess.run(["node", str(ROOT / "tools" / "purge.js"), str(jf)], env={**os.environ, "NODE_PATH": str(node_mods)},
+                       capture_output=True, text=True)
+    if r.returncode != 0:
+        print("purgecss hatası, kritik CSS atlandı:", r.stderr[-400:]); return
+    for j in jobs:
+        css = Path(j["out"]).read_text(encoding="utf-8")
+        name = hashlib.md5(css.encode()).hexdigest()[:12] + ".css"
+        if not (crit_dir / name).exists():
+            (crit_dir / name).write_text(css, encoding="utf-8")
+        full = full_names[j["bundle"]]
+        h = html_by_path[j["path"]]
+        h = h.replace(f"<link rel='stylesheet' id='vt-bundle-css' href='/assets/{j['bundle']}' media='all' />",
+                      f"<link rel='stylesheet' id='vt-crit-css' href='/assets/crit/{name}' media='all' />\n"
+                      f"<link rel='stylesheet' id='vt-full-css' href='/assets/{full}' media='print' onload=\"this.media='all'\" />"
+                      f"<noscript><link rel='stylesheet' href='/assets/{full}' media='all' /></noscript>", 1)
+        h = re.sub(r'<link rel="stylesheet" href="/assets/vanterm-duzen\.css(\?v=[0-9a-f]+)?" media="all" />\s*', "", h)
+        html_by_path[j["path"]] = h
+        dest = OUT / (j["path"].lstrip("/") + "index.html")
+        dest.write_text(h, encoding="utf-8")
+    shutil.rmtree(tmp, ignore_errors=True)
+    print(f"kritik CSS: {len(jobs)} sayfa, {len(list(crit_dir.glob('*.css')))} dosya, {len(full_names)} tam paket")
+
+
+def optimize_perf(h: str, path: str) -> str:
+    if "</head>" not in h or 'http-equiv="refresh"' in h:
+        return h
+
+    # 1) Google Fonts yerine siteye gömülü fontlar (temanın bozuk ve engelleyici font isteği kaldırılır)
+    h = re.sub(r"<link rel='dns-prefetch' href='//fonts\.googleapis\.com' />\s*", "", h)
+    h = re.sub(r"<link[^>]*href=['\"](?:https?:)?//fonts\.googleapis\.com/[^'\"]*['\"][^>]*>\s*", "", h)
+    h = re.sub(r"<link[^>]*href=['\"](?:https?:)?//fonts\.gstatic\.com['\"][^>]*>\s*", "", h)
+    if FONTS_CSS.exists() and "vt-fonts" not in h:
+        pre = ('<link rel="preload" href="/assets/fonts/barlow-condensed-latin-500-normal.woff2" as="font" type="font/woff2" crossorigin>\n'
+               f'<style id="vt-fonts">{FONTS_CSS.read_text(encoding="utf-8")}</style>\n')
+        h = re.sub(r"(<meta charset[^>]*>\s*)", lambda m: m.group(1) + pre, h, count=1) if "<meta charset" in h \
+            else h.replace("</head>", pre + "</head>", 1)
+
+    # 1b) Sayfada slayt yoksa Revolution Slider betikleri ve CSS'i yüklenmesin (~230 KB)
+    if "<rs-module" not in h:
+        h = re.sub(r"<link rel='stylesheet' id='rs-plugin-settings-css'[^>]*>\s*", "", h)
+        h = re.sub(r"<style id='rs-plugin-settings-inline-css'[^>]*>.*?</style>\s*", "", h, flags=re.S)
+        h = re.sub(r"<script[^>]*(?:rbtools|rs6)\.min\.js[^>]*></script>\s*", "", h)
+        h = re.sub(r"<script[^>]*>(?:(?!</script>).)*(?:RS_MODULES|setREVStartSize|revslider_showDoubleJqueryError)(?:(?!</script>).)*</script>\s*",
+                   "", h, flags=re.S)
+
+    # 2) Kritik olmayan CSS'ler (ikon fontları, lightbox, ipucu) sayfa çizimini engellemesin
+    def css_async(m):
+        tag = m.group(0)
+        if not any(k in tag for k in ASYNC_CSS) or "onload=" in tag:
+            return tag
+        t = re.sub(r"media=['\"]all['\"]", "", tag).replace("/>", "").rstrip(">").rstrip()
+        return f"{t} media=\"print\" onload=\"this.media='all'\" />"
+    h = re.sub(r"<link rel='stylesheet'[^>]*>", css_async, h)
+    h = bundle_css(h)
+
+    # 3) Harici betikler: defer (sıra korunur); jQuery'ye bağlı satır içi betikler DOMContentLoaded'da
+    def ext(m):
+        tag = m.group(0)
+        if "type=\"application/ld+json\"" in tag or re.search(r"\bdefer\b", tag):
+            return tag
+        # jQuery'ye bağlı async betikler (Revolution Slider) jQuery'den önce çalışmasın: async -> defer
+        if re.search(r"\basync\b", tag):
+            if re.search(r"revslider|rbtools|rs6", tag):
+                return re.sub(r"\basync\b", "defer", tag, count=1)
+            return tag
+        return tag.replace("<script", "<script defer", 1)
+    h = re.sub(r"<script\b[^>]*\bsrc=[\"'][^\"']+[\"'][^>]*>", ext, h)
+    # jQuery'nin hemen ardından: "ready" olayını tüm defer betikler yüklenene kadar beklet
+    if "vt-hold.js" not in h:
+        h = re.sub(r"(<script defer id=\"jquery-migrate-js\"[^>]*></script>|<script defer id=\"jquery-core-js\"[^>]*></script>)",
+                   lambda m: m.group(1) + '\n<script defer src="/assets/vt-hold.js"></script>', h, count=1)
+
+    def inline(m):
+        attrs, code = m.group(1), m.group(2)
+        if "ld+json" in attrs or "text/html" in attrs or "vt-defer" in attrs:
+            return m.group(0)
+        if "revslider_showDoubleJqueryError ===" in code:     # yalnızca bir fonksiyon tanımı; global kalmalı
+            return m.group(0)
+        if re.search(r"\bjQuery\s*[(.]|\btpj\b|\$\(", code) and "document.write" not in code:
+            # Sarmalayınca üst düzey "var x" yerel olur; global kalsın diye window.x yapılır
+            code = re.sub(r"(?m)^(\s*)var(\s+)(\w+)\s*;", r"\1window.\3 = window.\3;", code)
+            code = re.sub(r"(?m)^(\s*)var(\s+)(\w+)\s*=", r"\1window.\3 =", code)
+            return (f"<script{attrs} data-vt-defer>document.addEventListener('DOMContentLoaded',function(){{\n"
+                    f"{code}\n}});</script>")
+        return m.group(0)
+    h = re.sub(r"<script((?:(?!\bsrc=)[^>])*)>(.*?)</script>", inline, h, flags=re.S)
+
+    # 4) YouTube video kartları: tıklayınca yüklenen önizleme (1,5 MB YouTube betiği açılışta inmez)
+    def yt(m):
+        vid = m.group(1)
+        w = (re.search(r'width="(\d+)"', m.group(0)) or [None, "711"])[1]
+        hh = (re.search(r'height="(\d+)"', m.group(0)) or [None, "400"])[1]
+        return (f'<div class="vt-yt" data-id="{vid}" style="aspect-ratio:{w}/{hh}">'
+                f'<img src="https://i.ytimg.com/vi/{vid}/hqdefault.jpg" alt="YouTube video" loading="lazy" decoding="async" width="480" height="360">'
+                f'<button type="button" class="vt-yt-play" aria-label="Play video / Videoyu oynat"></button></div>')
+    h = YT_EMBED_RE.sub(yt, h)
+
+    # 5) Görseller: ilk ekrandaki (ilk içerik satırı + ilk büyük görsel) eager; geri kalanı tembel yükleme
+    ms = re.search(r"<main[^>]*>", h)
+    if ms:
+        rest = h[ms.end():]
+        rows = [m.start() for m in re.finditer(r'<div[^>]*class="vc_row wpb_row', rest)]
+        first_row_end = rows[1] if len(rows) > 1 else 4000
+        hero_done = False
+
+        def img(m):
+            nonlocal hero_done
+            t = m.group(0)
+            if "rs-lazyload" in t or "data-lazyload" in t or "data-lazy-src" in t or "dummy.png" in t or re.search(r"\bloading=", t):
+                return t
+            w = int((re.search(r'width="(\d+)"', t) or [0, "0"])[1] or 0)
+            big = w >= 300 or not re.search(r'width="', t)
+            if not hero_done and big and m.start() < max(first_row_end, 1500) + 6000:
+                hero_done = True
+                return t.replace("<img", '<img fetchpriority="high" decoding="async"', 1)
+            if m.start() < first_row_end:
+                return t.replace("<img", '<img decoding="async"', 1)
+            return t.replace("<img", '<img loading="lazy" decoding="async"', 1)
+        h = h[:ms.end()] + re.sub(r"<img\b[^>]*>", img, rest)
+
+    # 6) LCP arka plan görseli: ilk satırın arka planı veya sayfa başlık bandı önceden yüklenir
+    pre_img = None
+    body = h[ms.end():] if ms else ""
+    row = re.search(r'class="vc_row [^"]*?(vc_custom_\d+)[^"]*cspt-bgimage-yes', body[:3000])
+    if row:
+        bg = re.search(r"\." + row.group(1) + r"\{[^}]*background-image:\s*url\(([^)]+)\)", h)
+        if bg:
+            pre_img = bg.group(1).strip("'\"")
+    if not pre_img and "cspt-title-bar-wrapper" in h:
+        pre_img = "/wp-content/uploads/2019/10/common-bgg-1.jpg"
+    if pre_img and f'href="{pre_img}" as="image"' not in h:
+        h = h.replace("</head>", f'<link rel="preload" href="{pre_img}" as="image" fetchpriority="high">\n</head>', 1)
+    return h
 
 
 # ---------------------------------------------------------------- tıklanabilir telefon / e-posta
@@ -619,6 +878,12 @@ def main():
             continue
         shutil.rmtree(p) if p.is_dir() else p.unlink()
 
+    for old in (OUT / "assets").glob("bundle-*.css"):
+        old.unlink()
+
+    # 1b) WebP kopyaları (raw içinde bir kez üretilir, sonra kopyalanır): görsel.jpg -> görsel.jpg.webp
+    make_webp(src)
+
     # 2) sayfa listesi
     redirects = {}
     rfile = ROOT / "tools" / "redirects.json"
@@ -642,8 +907,9 @@ def main():
         t = re.sub(r"(# YONLENDIRMELER-BASLA\n).*?(# YONLENDIRMELER-BITIR)", lambda m: m.group(1) + lines + "\n" + m.group(2), t, flags=re.S)
         ht.write_text(t, encoding="utf-8")
 
-    # 3) dosyaları kopyala/işle
+    # 3) dosyaları kopyala/işle — önce tüm dosyalar (CSS paketleme için hazır olsunlar), sonra sayfalar
     html_by_path = {}
+    page_files = []
     for f in src.rglob("*"):
         if f.is_dir():
             continue
@@ -651,21 +917,27 @@ def main():
         if "index.html?" in rel or "/feed" in rel or rel.startswith("wp-json"):
             continue
         clean_rel = re.sub(r"\?.*$", "", rel)
+        if clean_rel.endswith(".webp") and f.stat().st_size == 0:
+            continue
         if clean_rel.endswith(".xml"):
             continue
-        if f.name == "index.html" and page_path(f.relative_to(src)) in redirects:
+        if f.name == "index.html":
+            if page_path(f.relative_to(src)) not in redirects:
+                page_files.append((f, clean_rel))
             continue
         dest = OUT / clean_rel
         dest.parent.mkdir(parents=True, exist_ok=True)
-        if f.name == "index.html":
-            path = page_path(f.relative_to(src))
-            h = process_html(f.read_text(encoding="utf-8", errors="replace"), path, pages)
-            html_by_path[path] = h
-            dest.write_text(h, encoding="utf-8")
-        elif clean_rel.endswith(".css"):
+        if clean_rel.endswith(".css"):
             dest.write_text(process_css(f.read_text(encoding="utf-8", errors="replace")), encoding="utf-8")
         else:
             shutil.copy2(f, dest)
+    for f, clean_rel in page_files:
+        dest = OUT / clean_rel
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        path = page_path(f.relative_to(src))
+        h = process_html(f.read_text(encoding="utf-8", errors="replace"), path, pages)
+        html_by_path[path] = h
+        dest.write_text(h, encoding="utf-8")
 
     # 4) ek sayfalar (404, arama) — tools/extra/ içinden
     extra = ROOT / "tools" / "extra"
@@ -730,6 +1002,16 @@ def main():
         img = img.group(1).replace(SITE, "") if img else ""
         index.append({"u": path, "l": lang_of(path), "t": title, "e": exc[:200], "i": img, "x": text[:4000]})
     (OUT / "search-index.json").write_text(json.dumps(index, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+
+    # 5b2) Sayfa başına kritik CSS: sayfanın kullandığı kurallar engelleyici, tam CSS arkadan (aynı sonuç)
+    critical_css(html_by_path)
+    # artık hiçbir sayfanın bağlamadığı ara paketleri sil
+    used = set()
+    for hp in OUT.rglob("*.html"):
+        used.update(re.findall(r"/assets/(bundle-[0-9a-f]+\.css)", hp.read_text(encoding="utf-8", errors="ignore")))
+    for old in (OUT / "assets").glob("bundle-*.css"):
+        if old.name not in used:
+            old.unlink()
 
     # 5c) yapay zeka arama motorları için site özeti
     write_llms(html_by_path)

@@ -228,3 +228,14 @@ a.vt-lightbox:hover img { opacity: .9; }
 /* Tıklanabilir telefon ve e-posta: bulunduğu yerin rengini ve yazı stilini korur */
 a.vt-tel, a.vt-mail { color: inherit !important; font: inherit; text-decoration: none; }
 a.vt-tel:hover, a.vt-mail:hover { text-decoration: underline; }
+
+/* YouTube önizlemesi (tıklayınca video yüklenir) */
+.vt-yt { position: relative; width: 100%; background: #000; cursor: pointer; overflow: hidden; }
+.vt-yt > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.vt-yt-play { position: absolute; left: 50%; top: 50%; width: 68px; height: 48px; margin: -24px 0 0 -34px; border: 0; border-radius: 12px;
+  background: rgba(23,35,34,.75); cursor: pointer; transition: background .2s; }
+.vt-yt-play::before { content: ""; position: absolute; left: 27px; top: 14px; border-style: solid; border-width: 10px 0 10px 17px; border-color: transparent transparent transparent #fff; }
+.vt-yt:hover .vt-yt-play { background: #f00; }
+/* Temanın video kapsayıcılarında önizleme, iframe ile aynı yeri kaplar (yükseklik kapsayıcıdan gelir) */
+.wpb_video_widget .wpb_video_wrapper > div.vt-yt,
+.format-video .cspt-featured-wrapper > .vt-yt { position: absolute !important; top: 0; right: 0; bottom: 0; left: 0; width: auto; height: auto; aspect-ratio: auto !important; }

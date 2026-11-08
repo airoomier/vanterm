@@ -92,3 +92,15 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { mark(); year(); lightbox(); });
   else { mark(); year(); lightbox(); }
 })();
+
+/* YouTube önizlemesi: tıklayınca videoyu yükler (açılışta YouTube betikleri inmez) */
+document.addEventListener('click', function (e) {
+  var b = e.target.closest && e.target.closest('.vt-yt');
+  if (!b) return;
+  var f = document.createElement('iframe');
+  f.src = 'https://www.youtube.com/embed/' + b.getAttribute('data-id') + '?autoplay=1&rel=0';
+  f.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
+  f.allowFullscreen = true; f.title = 'YouTube video';
+  f.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;border:0';
+  b.innerHTML = ''; b.appendChild(f);
+});

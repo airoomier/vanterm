@@ -2,6 +2,8 @@
 Options -Indexes
 DirectoryIndex index.html
 AddDefaultCharset UTF-8
+AddType image/webp .webp
+AddType font/woff2 .woff2
 ErrorDocument 404 /404.html
 
 <IfModule mod_rewrite.c>
@@ -15,6 +17,11 @@ RewriteCond %{HTTPS} off
 RewriteCond %{HTTP:X-Forwarded-Proto} !https
 RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 # HTTPS-BITIR
+
+# WebP destekleyen tarayıcılara aynı adresten WebP sürümü (görsel.jpg -> görsel.jpg.webp varsa)
+RewriteCond %{HTTP_ACCEPT} image/webp
+RewriteCond %{REQUEST_FILENAME}.webp -f
+RewriteRule ^(.+\.(?:jpe?g|png))$ $1.webp [T=image/webp,E=VTWEBP:1,L]
 
 # Eski WordPress arama adresleri -> statik arama
 RewriteCond %{QUERY_STRING} (^|&)s=
@@ -146,6 +153,8 @@ RewriteRule ^(.*[^/])$ /$1/ [L,R=301]
 </IfModule>
 
 <IfModule mod_headers.c>
+  Header append Vary Accept env=REDIRECT_VTWEBP
+  Header append Vary Accept env=VTWEBP
   Header always set X-Content-Type-Options "nosniff"
   Header always set Referrer-Policy "strict-origin-when-cross-origin"
   # Siteyi başka sitelerin içine gömme (clickjacking) engeli

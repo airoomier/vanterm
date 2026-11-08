@@ -1,0 +1,6 @@
+{
+  "name": "vanterm-tools",
+  "private": true,
+  "description": "build.py yardımcıları (sayfa başına kritik CSS)",
+  "dependencies": { "purgecss": "^6.0.0" }
+}
