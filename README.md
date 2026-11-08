@@ -62,8 +62,11 @@ Command:
 **Add New Cron Job**. Dağıtım geçmişi `~/vanterm-deploy.log` dosyasına yazılır.
 
 ### 6. Form e-postası
-cPanel → **Email Accounts → Create** → `form@vanterm.com`.
-cPanel → **Email Deliverability** → vanterm.com için SPF ve DKIM "Valid" olmalı (değilse **Repair**).
+E-postalar ofis.net'te barındırılıyor (MX: mx01/mx02.ofis.net); form mailleri **bilgi@vanterm.com**'a gider.
+- cPanel → **E-posta Yönlendirme (Email Routing)** → vanterm.com → **Uzak Posta Sunucusu (Remote Mail Exchanger)** seçili olmalı.
+  Aksi hâlde cPanel mailleri yerel kutuya teslim eder ve ofis.net'e ulaşmaz.
+- cPanel'de vanterm.com posta kutusu **açılmamalı**.
+- SPF (`include:_spf.trwww.com`) web sunucusunu kapsıyor; ek DNS ayarı gerekmez.
 
 ### 7. (İsteğe bağlı) Demoyu şifreyle koru
 cPanel → **Directory Privacy** → `demo.vanterm.com` klasörü → "Password protect this directory" → kullanıcı adı ve şifre oluştur.
@@ -94,7 +97,7 @@ Firmaya adresle birlikte kullanıcı adı ve şifreyi ver.
 
 - Sunucudan bir dosya silinecekse yolunu `deploy/silinecekler.txt` dosyasına ekle (kopyalama işlemi dosya silmez).
 - Yayın adresi (demo / canlı): `deploy/hedef.conf`.
-- Form alıcısı: `site/form-gonder.php` içindeki `ALICI`.
+- Form alıcısı: `site/form-gonder.php` içindeki `ALICI` (bilgi@vanterm.com; gönderen form@vanterm.com, yanıtla = ziyaretçi).
 - Form başarı/hata metinleri: `site/form-ayarlar.php`.
 - Değişiklikten sonra kontrol: `python3 tools/check.py` (kırık iç link taraması).
 

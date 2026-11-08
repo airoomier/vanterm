@@ -10,7 +10,7 @@ declare(strict_types=1);
 if (!function_exists('str_contains')) { function str_contains($h, $n) { return $n === '' || strpos($h, $n) !== false; } }
 if (!function_exists('str_starts_with')) { function str_starts_with($h, $n) { return strncmp($h, $n, strlen($n)) === 0; } }
 
-const ALICI    = 'form@vanterm.com';
+const ALICI    = 'bilgi@vanterm.com';
 const GONDEREN = 'form@vanterm.com';
 const SITE     = 'Vanterm';
 
