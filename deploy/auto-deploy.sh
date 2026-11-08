@@ -26,7 +26,21 @@ case "$HEDEF" in ""|/*|*..*) echo "$(date '+%F %T') geçersiz HEDEF: $HEDEF" >> 
 TARGET="$HOME/$HEDEF"
 [ -d "$TARGET" ] || { echo "$(date '+%F %T') hedef klasör yok: $TARGET" >> "$LOG"; exit 1; }
 
+# cPanel/LiteSpeed'in .htaccess içine yazdığı blokları sakla (PHP sürümü, LSCache vb.)
+KORU=""
+if [ -f "$TARGET/.htaccess" ]; then
+  KORU="$(awk '
+    /# php -- BEGIN cPanel-generated handler|# BEGIN cPanel-generated|# BEGIN LSCACHE|# BEGIN NON_LSCACHE/ {k=1}
+    k {print}
+    /# php -- END cPanel-generated handler|# END cPanel-generated|# END LSCACHE|# END NON_LSCACHE/ {k=0}
+  ' "$TARGET/.htaccess")"
+fi
+
 /bin/cp -R site/. "$TARGET/"
+
+if [ -n "$KORU" ]; then
+  { echo ""; echo "$KORU"; } >> "$TARGET/.htaccess"
+fi
 
 # Depodan kaldırılan dosyaları sunucudan da sil (deploy/silinecekler.txt, hedef klasöre göre yol)
 if [ -f deploy/silinecekler.txt ]; then

@@ -6,6 +6,10 @@
  */
 declare(strict_types=1);
 
+// PHP 7.4 uyumluluğu
+if (!function_exists('str_contains')) { function str_contains($h, $n) { return $n === '' || strpos($h, $n) !== false; } }
+if (!function_exists('str_starts_with')) { function str_starts_with($h, $n) { return strncmp($h, $n, strlen($n)) === 0; } }
+
 const ALICI    = 'form@vanterm.com';
 const GONDEREN = 'form@vanterm.com';
 const SITE     = 'Vanterm';
@@ -49,7 +53,7 @@ if (!empty($wp['hp'])) cevap(true, $form['basari']);
 // Basit hız sınırı: aynı IP'den 60 sn içinde en fazla 3 gönderim
 $ip   = $_SERVER['REMOTE_ADDR'] ?? '0';
 $tmp  = sys_get_temp_dir() . '/vanterm_form_' . md5($ip);
-$zaman = array_filter((array)@json_decode((string)@file_get_contents($tmp), true), fn($t) => $t > time() - 60);
+$zaman = array_filter((array)@json_decode((string)@file_get_contents($tmp), true), function ($t) { return $t > time() - 60; });
 if (count($zaman) >= 3) cevap(false, $form['hata'], 429);
 $zaman[] = time();
 @file_put_contents($tmp, json_encode(array_values($zaman)));
