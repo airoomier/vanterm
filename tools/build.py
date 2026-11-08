@@ -234,7 +234,7 @@ def asset_version(name: str) -> str:
 
 
 def version_assets(h: str) -> str:
-    for name in ("vanterm-duzen.css", "vanterm-duzen.js", "vanterm-forms.js", "vanterm-search.js"):
+    for name in ("vanterm-duzen.css", "vanterm-duzen.js", "vanterm-forms.js", "vanterm-search.js", "vt-hold.js"):
         h = re.sub(r'/assets/' + re.escape(name) + r'(\?v=[0-9a-f]+)?"', f'/assets/{name}?v={asset_version(name)}"', h)
     return h
 
