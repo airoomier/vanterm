@@ -17,7 +17,14 @@ LOCAL=$(git rev-parse HEAD)
 REMOTE=$(git rev-parse origin/main)
 [ "$LOCAL" = "$REMOTE" ] && [ $FORCE -eq 0 ] && exit 0
 
+ONCEKI=$(md5sum "$REPO/deploy/auto-deploy.sh" 2>/dev/null | cut -d' ' -f1)
 git reset -q --hard origin/main
+
+# Bu betik de güncellendiyse yeni sürümüyle baştan çalış (bash eski metinle devam etmesin)
+SONRAKI=$(md5sum "$REPO/deploy/auto-deploy.sh" 2>/dev/null | cut -d' ' -f1)
+if [ "$ONCEKI" != "$SONRAKI" ] && [ -z "$VT_YENIDEN" ]; then
+  VT_YENIDEN=1 exec /bin/bash "$REPO/deploy/auto-deploy.sh" --force
+fi
 
 # Ayarlar (güncel commit'ten)
 HEDEF="demo.vanterm.com"; MOD="demo"; HTTPS="evet"
