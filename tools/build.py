@@ -12,6 +12,7 @@ Kullanım:
 Metinlere dokunulmaz. Yalnızca: alan adı, dosya sorgu dizeleri (?ver=), WordPress'e özgü
 gereksiz <head> satırları, form/arama hedefleri değiştirilir; hreflang eklenir.
 """
+import html
 import json
 import os
 from html import unescape as html_unescape
@@ -218,6 +219,7 @@ def process_html(h: str, path: str, pages: set) -> str:
             h = h.replace("</body>", '<script src="/assets/vanterm-forms.js" defer></script>\n</body>', 1)
     h = add_alts(h, path)
     h = linkify_contacts(h)
+    h = describe_links(h)
     h = optimize_perf(h, path)
     for src_p, dst_p in REDIRECTS.items():
         h = h.replace(f'{SITE}{src_p}"', f'{SITE}{final_url(dst_p, pages)}"')
@@ -609,6 +611,73 @@ def optimize_perf(h: str, path: str) -> str:
 # Aranabilir numaralar (faks +90 (262) 751 1350 bilerek dışarıda)
 PHONES = {"+90 (262) 751 0594": "+902627510594"}
 EMAIL_RE = re.compile(r"(?<![\w.+-])([\w.+-]+@(?:[\w-]+\.)+[a-z]{2,})(?![\w-])", re.I)
+
+
+GENERIC_LINK_RE = re.compile(r'(<a\s[^>]*href="([^"]+)"[^>]*>)(\s*(?:Read More|Read more|More|Devamı|Devamını Oku)\s*)(</a>)')
+
+
+def describe_links(h: str) -> str:
+    """"Read More / More / Devamı" linklerine, görünen metni değiştirmeden, ekran okuyucu ve
+    arama motorları için gizli açıklama ekler (linkin gittiği yazının başlığı)."""
+    def title_for(href, before, span=6000):
+        win = before[-span:]
+        best = None
+        hm = re.search(r'<h[1-6][^>]*>\s*<a\s[^>]*href="' + re.escape(href) + r'"[^>]*>([^<]{3,200})</a>', win)
+        if hm:
+            return html.unescape(hm.group(1)).strip()
+        for m in re.finditer(r'<a\s[^>]*href="' + re.escape(href) + r'"[^>]*>([^<]{3,200})</a>', win):
+            t = html.unescape(m.group(1)).strip()
+            if t and not GENERIC_LINK_RE.fullmatch('<a href="x">' + m.group(1) + '</a>') and len(t) > len(best or ''):
+                best = t
+        if best:
+            return best
+        for m in re.finditer(r'<a\s[^>]*href="' + re.escape(href) + r'"[^>]*>\s*<img[^>]*\salt="([^"]{3,200})"', win):
+            best = html.unescape(m.group(1)).strip()
+        return best
+
+    out, pos = [], 0
+    for m in GENERIC_LINK_RE.finditer(h):
+        if 'vt-sr' in m.group(3):
+            continue
+        t = title_for(m.group(2), h[:m.start()])
+        if not t:
+            continue
+        out.append(h[pos:m.start()])
+        out.append(m.group(1) + m.group(3).rstrip() + '<span class="vt-sr">: ' + html.escape(t, quote=False) + '</span>' + m.group(4))
+        pos = m.end()
+    out.append(h[pos:])
+    h = "".join(out)
+    tr = '<html lang="tr' in h
+
+    # İçinde metin olmayan linkler (ikon/görsel): aria-label
+    def empty_link(m):
+        tag, href, inner = m.group(1), m.group(2), m.group(3)
+        vis = re.sub(r'<span class="creativesplanet-hide">.*?</span>', '', inner, flags=re.S)
+        if 'aria-label=' in tag or re.sub(r'<[^>]+>', '', vis).strip() or re.search(r'<img[^>]*\salt="[^"]+"', inner):
+            return m.group(0)
+        icon = re.search(r'cspt-base-icon-(twitter|youtube-play|facebook|linkedin|instagram)', inner)
+        if 'youtube.com/watch' in href:
+            t = 'YouTube video'
+        elif icon:
+            t = {'twitter': 'Twitter', 'youtube-play': 'YouTube', 'facebook': 'Facebook',
+                 'linkedin': 'LinkedIn', 'instagram': 'Instagram'}[icon.group(1)]
+        elif 'scroll-to-top' in tag:
+            t = 'Sayfa başına dön' if tr else 'Back to top'
+        else:
+            t = title_for(href, h, len(h)) or None
+        if not t:
+            return m.group(0)
+        return tag[:-1] + ' aria-label="' + html.escape(t) + '">' + inner + '</a>'
+    h = re.sub(r'(<a\s[^>]*href="([^"]+)"[^>]*>)((?:(?!</a>).){0,2000}?)</a>', empty_link, h, flags=re.S)
+
+    h = h.replace('<button id="menu-toggle" class="nav-menu-toggle">',
+                  '<button id="menu-toggle" class="nav-menu-toggle" aria-label="' + ('Menü' if tr else 'Menu') + '">')
+    h = h.replace('<a role="button" tabindex="0" class="cli_settings_button"',
+                  '<a role="button" tabindex="0" class="cli_settings_button" aria-label="' + ('Çerez ayarları' if tr else 'Cookie settings') + '"')
+    h = h.replace('<span class="wpml-ls-native" role="menuitem">', '<span class="wpml-ls-native">')
+    h = re.sub(r'<button type="submit" class="search-submit">([^<]+)</button>',
+               lambda m: '<button type="submit" class="search-submit" aria-label="' + m.group(1).strip() + '">' + m.group(1) + '</button>', h)
+    return h
 
 
 def linkify_contacts(h: str) -> str:

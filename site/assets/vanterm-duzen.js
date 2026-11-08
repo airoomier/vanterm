@@ -104,3 +104,20 @@ document.addEventListener('click', function (e) {
   f.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;border:0';
   b.innerHTML = ''; b.appendChild(f);
 });
+
+/* Slider, arka plan görsellerini alt özelliği olmadan yeniden oluşturuyor: dekoratif olarak işaretle */
+(function () {
+  function fix(root) {
+    var imgs = (root || document).querySelectorAll('rs-module img:not([alt])');
+    for (var i = 0; i < imgs.length; i++) imgs[i].setAttribute('alt', '');
+  }
+  function start() {
+    var mods = document.querySelectorAll('rs-module');
+    if (!mods.length || !window.MutationObserver) return;
+    fix();
+    var t;
+    var mo = new MutationObserver(function () { clearTimeout(t); t = setTimeout(fix, 50); });
+    for (var i = 0; i < mods.length; i++) mo.observe(mods[i], { childList: true, subtree: true });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
+})();
