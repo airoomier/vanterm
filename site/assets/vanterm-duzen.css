@@ -308,3 +308,6 @@ a.vt-tel:hover, a.vt-mail:hover { text-decoration: underline; }
   .single-cspt-portfolio .cspt-portfolio-related .cspt-element-posts-wrapper > .cspt-ele:last-child { margin-bottom: 0; }
   body.single-cspt-portfolio.cspt-sidebar-no #content { padding-bottom: 40px; }
 }
+
+/* Ürün kartları: büyüteçli mavi üçgen fotoğrafın tam sağ üst köşesinde */
+.cspt-portfolio-style-2 .cspt-portfolio-icon-wrapper { top: 0; right: 0; }
