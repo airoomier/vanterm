@@ -291,3 +291,10 @@ a.vt-tel:hover, a.vt-mail:hover { text-decoration: underline; }
   /* Ana sayfa: Bilgi Merkezi bölümü (gri) üst/alt boşluk */
   body.home #content .vc_row.vc_custom_1563974858964 { padding-top: 60px !important; padding-bottom: 70px !important; }
 }
+
+@media (min-width: 768px) {
+  /* Yazı sayfası: İlişkili Haberler kutusu altı ile footer arası */
+  .single-post .cspt-post-related .cspt-element-posts-wrapper > .cspt-ele { margin-bottom: 0; }
+  .single-post .cspt-blog-classic { margin-bottom: 0; }
+  .single-post .content-area.col-md-9#primary { padding-bottom: 70px; }
+}
