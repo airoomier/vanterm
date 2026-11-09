@@ -742,6 +742,12 @@ def describe_links(h: str) -> str:
     h = h.replace('<a role="button" tabindex="0" class="cli_settings_button"',
                   '<a role="button" tabindex="0" class="cli_settings_button" aria-label="' + ('Çerez ayarları' if tr else 'Cookie settings') + '"')
     h = h.replace('<span class="wpml-ls-native" role="menuitem">', '<span class="wpml-ls-native">')
+    # Önceki/sonraki gezinme başlıkları (TR sayfalarda Türkçe)
+    if tr:
+        for a, b in (("Next Ürün", "Sonraki Ürün"), ("Previous Product", "Önceki Ürün"), ("Next Product", "Sonraki Ürün"),
+                     ("Previous Ürün", "Önceki Ürün"), ("Next uygulama", "Sonraki Uygulama"), ("Previous uygulama", "Önceki Uygulama"),
+                     ("Next Application", "Sonraki Uygulama"), ("Previous Application", "Önceki Uygulama")):
+            h = re.sub(r'(class="cspt-(?:portfolio|service)-nav-head">)' + re.escape(a) + '<', r'\g<1>' + b + '<', h)
     # Twitter kuşu yerine X logosu
     h = h.replace('<i class="cspt-base-icon-twitter"></i>', '<i class="vt-x" aria-hidden="true">' + X_SVG + '</i>')
     h = h.replace('title="Share on Twitter"', 'title="Share on X"')

@@ -311,3 +311,11 @@ a.vt-tel:hover, a.vt-mail:hover { text-decoration: underline; }
 
 /* Ürün kartları: büyüteçli mavi üçgen fotoğrafın tam sağ üst köşesinde */
 .cspt-portfolio-style-2 .cspt-portfolio-icon-wrapper { top: 0; right: 0; }
+
+/* Önceki / Sonraki ürün-uygulama kutusu: dışındaki üst ve alt boşluklar */
+.single-cspt-portfolio .post-navigation .nav-links,
+.single-cspt-service .post-navigation .nav-links { padding-top: 0; margin-bottom: 40px; }
+@media (max-width: 767px) {
+  .single-cspt-portfolio .post-navigation .nav-links,
+  .single-cspt-service .post-navigation .nav-links { margin-bottom: 0; }
+}
