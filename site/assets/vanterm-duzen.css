@@ -298,3 +298,6 @@ a.vt-tel:hover, a.vt-mail:hover { text-decoration: underline; }
   .single-post .cspt-blog-classic { margin-bottom: 0; }
   .single-post .content-area.col-md-9#primary { padding-bottom: 70px; }
 }
+
+/* Yapışkan menü, içerikteki etiketlerin (HABERLER vb.) üstünde kalsın */
+.site-header .cspt-header-overlay, .cspt-header-style-3 .cspt-header-overlay, .cspt-header-style-2 .cspt-header-overlay { z-index: 100; }
