@@ -220,6 +220,7 @@ def process_html(h: str, path: str, pages: set) -> str:
     h = add_alts(h, path)
     h = linkify_contacts(h)
     h = describe_links(h)
+    h = desktop_spacing(h)
     h = optimize_perf(h, path)
     for src_p, dst_p in REDIRECTS.items():
         h = h.replace(f'{SITE}{src_p}"', f'{SITE}{final_url(dst_p, pages)}"')
@@ -611,6 +612,35 @@ def optimize_perf(h: str, path: str) -> str:
 # Aranabilir numaralar (faks +90 (262) 751 1350 bilerek dışarıda)
 PHONES = {"+90 (262) 751 0594": "+902627510594"}
 EMAIL_RE = re.compile(r"(?<![\w.+-])([\w.+-]+@(?:[\w-]+\.)+[a-z]{2,})(?![\w-])", re.I)
+
+
+
+def desktop_spacing(h: str) -> str:
+    """Masaüstünde iç sayfa bölümlerinin (vc_row) üst/alt boşluklarını ~1,75 kat artırır.
+    Ana sayfa hariç; mobil değerler aynı kalır."""
+    body = re.search(r'<body[^>]*class="([^"]*)"', h)
+    if not body or re.search(r'\bhome\b', body.group(1)):
+        return h
+    rows = set(re.findall(r'class="vc_row wpb_row vc_row-fluid(?![^"]*vc_inner)[^"]*vc_custom_(\d+)', h))
+    m = re.search(r'(<style data-type="vc_shortcodes-custom-css">)(.*?)(</style>)', h, re.S)
+    if not m or not rows:
+        return h
+    out = []
+    for cid, decl in re.findall(r'\.vc_custom_(\d+)\{([^}]*)\}', m.group(2)):
+        if cid not in rows:
+            continue
+        parts = []
+        for side in ("top", "bottom"):
+            v = re.search(r'padding-' + side + r':\s*(\d+)px', decl)
+            if v and int(v.group(1)) > 0:
+                n = min(100, int(round(int(v.group(1)) * 1.75 / 5.0)) * 5)
+                parts.append(f"padding-{side}:{n}px !important")
+        if parts:
+            out.append(f"body #content .vc_row.vc_custom_{cid}{{{';'.join(parts)}}}")
+    if not out:
+        return h
+    extra = "<style id=\"vt-bosluk\">@media (min-width:992px){" + "".join(out) + "}</style>"
+    return h[:m.end()] + extra + h[m.end():]
 
 
 GENERIC_LINK_RE = re.compile(r'(<a\s[^>]*href="([^"]+)"[^>]*>)(\s*(?:Read More|Read more|More|Devamı|Devamını Oku)\s*)(</a>)')
