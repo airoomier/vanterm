@@ -301,3 +301,10 @@ a.vt-tel:hover, a.vt-mail:hover { text-decoration: underline; }
 
 /* Yapışkan menü, içerikteki etiketlerin (HABERLER vb.) üstünde kalsın */
 .site-header .cspt-header-overlay, .cspt-header-style-3 .cspt-header-overlay, .cspt-header-style-2 .cspt-header-overlay { z-index: 100; }
+
+@media (max-width: 767px) {
+  /* Ürün sayfası: İlişkili Ürünler başlığı üstü ve son satır altı */
+  .single-cspt-portfolio .cspt-portfolio-related { margin-top: 40px; }
+  .single-cspt-portfolio .cspt-portfolio-related .cspt-element-posts-wrapper > .cspt-ele:last-child { margin-bottom: 0; }
+  body.single-cspt-portfolio.cspt-sidebar-no #content { padding-bottom: 40px; }
+}
