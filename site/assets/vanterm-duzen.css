@@ -256,6 +256,7 @@ a.vt-tel:hover, a.vt-mail:hover { text-decoration: underline; }
 /* Mobil boşluk ayarları */
 @media (max-width: 767px) {
   body.single-cspt-portfolio.cspt-sidebar-no #content { padding-top: 40px; }
+  .content-area.col-md-9#primary { padding-top: 40px; }
   .single-post .cspt-post-related .cspt-ele:last-child { margin-bottom: 0; }
   .single-post .cspt-blog-classic { margin-bottom: 30px; }
   .widget-area.col-md-3.creativesplanet-sidebar { padding-bottom: 20px; }
