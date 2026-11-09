@@ -616,6 +616,10 @@ EMAIL_RE = re.compile(r"(?<![\w.+-])([\w.+-]+@(?:[\w-]+\.)+[a-z]{2,})(?![\w-])",
 GENERIC_LINK_RE = re.compile(r'(<a\s[^>]*href="([^"]+)"[^>]*>)(\s*(?:Read More|Read more|More|Devamı|Devamını Oku)\s*)(</a>)')
 
 
+X_SVG = ('<svg viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor" focusable="false">'
+         '<path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>')
+
+
 def describe_links(h: str) -> str:
     """"Read More / More / Devamı" linklerine, görünen metni değiştirmeden, ekran okuyucu ve
     arama motorları için gizli açıklama ekler (linkin gittiği yazının başlığı)."""
@@ -659,7 +663,7 @@ def describe_links(h: str) -> str:
         if 'youtube.com/watch' in href:
             t = 'YouTube video'
         elif icon:
-            t = {'twitter': 'Twitter', 'youtube-play': 'YouTube', 'facebook': 'Facebook',
+            t = {'twitter': 'X', 'youtube-play': 'YouTube', 'facebook': 'Facebook',
                  'linkedin': 'LinkedIn', 'instagram': 'Instagram'}[icon.group(1)]
         elif 'scroll-to-top' in tag:
             t = 'Sayfa başına dön' if tr else 'Back to top'
@@ -675,6 +679,9 @@ def describe_links(h: str) -> str:
     h = h.replace('<a role="button" tabindex="0" class="cli_settings_button"',
                   '<a role="button" tabindex="0" class="cli_settings_button" aria-label="' + ('Çerez ayarları' if tr else 'Cookie settings') + '"')
     h = h.replace('<span class="wpml-ls-native" role="menuitem">', '<span class="wpml-ls-native">')
+    # Twitter kuşu yerine X logosu
+    h = h.replace('<i class="cspt-base-icon-twitter"></i>', '<i class="vt-x" aria-hidden="true">' + X_SVG + '</i>')
+    h = h.replace('title="Share on Twitter"', 'title="Share on X"')
     h = re.sub(r'<button type="submit" class="search-submit">([^<]+)</button>',
                lambda m: '<button type="submit" class="search-submit" aria-label="' + m.group(1).strip() + '">' + m.group(1) + '</button>', h)
     return h
