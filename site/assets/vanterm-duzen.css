@@ -287,3 +287,7 @@ a.vt-tel:hover, a.vt-mail:hover { text-decoration: underline; }
   /* Ürünler / Uygulamalar: kategori satırları arasında nefes payı */
   body.page:not(.home) #content .wpb-content-wrapper > .vc_row.cspt-bg-color-transparent:not([class*="vc_custom_"]) { padding-bottom: 50px; }
 }
+@media (min-width: 992px) {
+  /* Ana sayfa: Bilgi Merkezi bölümü (gri) üst/alt boşluk */
+  body.home #content .vc_row.vc_custom_1563974858964 { padding-top: 60px !important; padding-bottom: 70px !important; }
+}

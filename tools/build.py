@@ -619,21 +619,54 @@ def desktop_spacing(h: str) -> str:
     """Masaüstünde iç sayfa bölümlerinin (vc_row) üst/alt boşluklarını ~1,75 kat artırır.
     Ana sayfa hariç; mobil değerler aynı kalır."""
     body = re.search(r'<body[^>]*class="([^"]*)"', h)
-    if not body or re.search(r'\bhome\b', body.group(1)):
+    if not body:
         return h
-    rows = set(re.findall(r'class="vc_row wpb_row vc_row-fluid(?![^"]*vc_inner)[^"]*vc_custom_(\d+)', h))
+    canon = re.search(r'<link rel="canonical" href="https://vanterm\.com(/[^"]*)"', h)
+    canon = canon.group(1) if canon else ""
+    # ana sayfa ve iletişim sayfalarında biraz daha geniş
+    factor = 2.0 if (re.search(r'\bhome\b', body.group(1)) or canon in ("/contact-us/", "/tr/iletisim/")) else 1.75
+    order, bgs = [], []
+    for m2 in re.finditer(r'class="(vc_row wpb_row vc_row-fluid(?![^"]*vc_inner)[^"]*)"', h):
+        c = re.search(r'vc_custom_(\d+)', m2.group(1))
+        order.append(c.group(1) if c else "")
+        bg = re.search(r'cspt-bg-color-(white|light|transparent|[a-z]+color)\b', m2.group(1))
+        bgs.append(("white" if bg and bg.group(1) in ("white", "transparent") else bg.group(1)) if bg else "white")
+    rows = set(o for o in order if o)
     m = re.search(r'(<style data-type="vc_shortcodes-custom-css">)(.*?)(</style>)', h, re.S)
     if not m or not rows:
         return h
+    decls = dict(re.findall(r'\.vc_custom_(\d+)\{([^}]*)\}', m.group(2)))
+    def pad(cid, side):
+        v = re.search(r'padding-' + side + r':\s*(\d+)px', decls.get(cid, ""))
+        return int(v.group(1)) if v else None
+    # alt boşluğu küçük (<=20px) bir satır, altındaki satıra bağlı tasarlanmıştır (ör. başlık + içerik):
+    # o birleşimi büyütme
+    keep = set()
+    for i, (a, b) in enumerate(zip(order, order[1:])):
+        pb = pad(a, "bottom") if a else None
+        if pb is not None and pb <= 20 and bgs[i] == bgs[i + 1]:
+            keep.add((a, "bottom"))
+            if b:
+                keep.add((b, "top"))
+    # renk değişen bölüm sınırlarında en az 70px
+    edge = set()
+    for i, (a, b) in enumerate(zip(order, order[1:])):
+        if bgs[i] != bgs[i + 1]:
+            if a: edge.add((a, "bottom"))
+            if b: edge.add((b, "top"))
     out = []
-    for cid, decl in re.findall(r'\.vc_custom_(\d+)\{([^}]*)\}', m.group(2)):
+    for cid, decl in decls.items():
         if cid not in rows:
             continue
         parts = []
         for side in ("top", "bottom"):
             v = re.search(r'padding-' + side + r':\s*(\d+)px', decl)
+            if (cid, side) in keep:
+                continue
             if v and int(v.group(1)) > 0:
-                n = min(100, int(round(int(v.group(1)) * 1.75 / 5.0)) * 5)
+                n = min(100, int(round(int(v.group(1)) * factor / 5.0)) * 5)
+                if (cid, side) in edge:
+                    n = max(n, 70)
                 parts.append(f"padding-{side}:{n}px !important")
         if parts:
             out.append(f"body #content .vc_row.vc_custom_{cid}{{{';'.join(parts)}}}")
