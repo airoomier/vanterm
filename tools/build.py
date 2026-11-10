@@ -221,6 +221,7 @@ def process_html(h: str, path: str, pages: set) -> str:
     h = linkify_contacts(h)
     h = describe_links(h)
     h = desktop_spacing(h)
+    h = taller_home_cards(h)
     h = optimize_perf(h, path)
     for src_p, dst_p in REDIRECTS.items():
         h = h.replace(f'{SITE}{src_p}"', f'{SITE}{final_url(dst_p, pages)}"')
@@ -633,6 +634,32 @@ def optimize_perf(h: str, path: str) -> str:
 PHONES = {"+90 (262) 751 0594": "+902627510594"}
 EMAIL_RE = re.compile(r"(?<![\w.+-])([\w.+-]+@(?:[\w-]+\.)+[a-z]{2,})(?![\w-])", re.I)
 
+
+
+def taller_home_cards(h: str) -> str:
+    """Ana sayfadaki örnek uygulama kaydırıcısında basık 770x350 kırpım yerine 768x499 (≈3:2) görsel."""
+    body = re.search(r'<body[^>]*class="([^"]*)"', h)
+    if not body or not re.search(r'\bhome\b', body.group(1)):
+        return h
+    def sw(m):
+        tag = m.group(0)
+        src = re.search(r'src="([^"]+)-770x350\.(jpe?g|png)"', tag)
+        if not src:
+            return tag
+        for suf, w, hh in (("-768x499", 768, 499), ("-770x500", 770, 500), ("", None, None)):
+            cand = f"{src.group(1)}{suf}.{src.group(2)}"
+            if (OUT / cand.lstrip("/")).is_file():
+                if w is None:
+                    try:
+                        from PIL import Image
+                        w, hh = Image.open(OUT / cand.lstrip("/")).size
+                    except Exception:
+                        return tag
+                tag = tag.replace(src.group(0), f'src="{cand}"')
+                tag = re.sub(r'width="770" height="350"', f'width="{w}" height="{hh}"', tag)
+                return tag.replace('class="', 'class="vt-tall ', 1)
+        return tag
+    return re.sub(r'<img[^>]*size-cspt-img-770x350[^>]*>', sw, h)
 
 
 def desktop_spacing(h: str) -> str:

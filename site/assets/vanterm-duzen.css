@@ -319,3 +319,6 @@ a.vt-tel:hover, a.vt-mail:hover { text-decoration: underline; }
   .single-cspt-portfolio .post-navigation .nav-links,
   .single-cspt-service .post-navigation .nav-links { margin-bottom: 0; }
 }
+
+/* Ana sayfa örnek uygulamalar: daha yüksek (≈3:2) fotoğraflar */
+img.vt-tall { width: 100%; height: auto; aspect-ratio: 768 / 499; object-fit: cover; }
