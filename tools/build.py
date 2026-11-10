@@ -239,7 +239,27 @@ def asset_version(name: str) -> str:
 def version_assets(h: str) -> str:
     for name in ("vanterm-duzen.css", "vanterm-duzen.js", "vanterm-forms.js", "vanterm-search.js", "vt-hold.js"):
         h = re.sub(r'/assets/' + re.escape(name) + r'(\?v=[0-9a-f]+)?"', f'/assets/{name}?v={asset_version(name)}"', h)
-    return h
+    # Eski WordPress sitesi (WP Rocket) aynı adreslerdeki JS/CSS dosyalarını tarayıcılara 1 yıllığına
+    # önbelleğe aldırmış olabilir; içerik etiketiyle adresleri değiştir ki ziyaretçi eski dosyayı kullanmasın.
+    def tag(m):
+        attr, qt, path, q = m.group(1), m.group(2), m.group(3), m.group(4) or ""
+        f = OUT / path.lstrip("/")
+        if not f.is_file():
+            return m.group(0)
+        q = re.sub(r'([?&])vt=[0-9a-f]+&?', r'\1', q).rstrip("?&")
+        return f'{attr}={qt}{path}{q}{"&" if q else "?"}vt={_file_hash(f)}{qt}'
+    return re.sub(r'((?:src|href))=(["\'])(/wp-(?:content|includes)/[^"\'?]+\.(?:js|css))(\?[^"\']*)?\2', tag, h)
+
+
+_HASHES = {}
+
+
+def _file_hash(f):
+    import hashlib
+    k = str(f)
+    if k not in _HASHES:
+        _HASHES[k] = hashlib.md5(f.read_bytes()).hexdigest()[:8]
+    return _HASHES[k]
 
 
 LIVE_RE = re.compile(r"(?:https?:)?//(?:www\.)?vanterm\.com(?=[/\"')\s]|$)")
