@@ -92,4 +92,10 @@ $basliklar = [
 if ($eposta !== '') $basliklar[] = 'Reply-To: ' . $eposta;
 
 $ok = @mail(ALICI, $konu, $govde, implode("\r\n", $basliklar), '-f' . GONDEREN);
+
+// Teşhis kaydı (web kökünün DIŞINDA; kişisel veri yazılmaz): tarih, form, mail() sonucu, hata
+$hata = $ok ? '' : (string)(error_get_last()['message'] ?? '');
+@file_put_contents(dirname(__DIR__) . '/vanterm-form.log',
+    date('Y-m-d H:i:s') . ' | ' . $form['ad'] . ' | mail()=' . ($ok ? 'OK' : 'BASARISIZ') . ($hata !== '' ? ' | ' . $hata : '') . "\n",
+    FILE_APPEND | LOCK_EX);
 $ok ? cevap(true, $form['basari']) : cevap(false, $form['hata'], 500);
