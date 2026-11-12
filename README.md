@@ -110,3 +110,19 @@ Firmaya adresle birlikte kullanıcı adı ve şifreyi ver.
 - Formlar: WPForms işaretlemesi ve tasarımı aynen duruyor; gönderim `form-gonder.php` (PHP `mail()`) üzerinden. Bot koruması: gizli alan + IP başına dakikada 3 gönderim.
 - Arama: `/search/?s=...` ve `/tr/search/?s=...` statik arama (`search-index.json`). Eski `/?s=` adresleri buraya yönlenir.
 - `tools/build.py` ilk dönüştürmeyi yapan araçtır. Site artık `site/` üzerinden düzenlendiği için tekrar çalıştırılması gerekmez. Çalıştırılırsa `site/` içindeki elle yapılmış değişiklikler silinir.
+
+## Form e-postaları (SMTP)
+Paylaşımlı sunucuda PHP `mail()` gönderimi sunucudan çıkmadığı için formlar kimlik doğrulamalı SMTP ile gönderir.
+Ev dizinine (public_html'in bir üstü) `vanterm-smtp.php` dosyası oluşturulur — bu dosya git'e girmez:
+
+```php
+<?php
+return [
+    'host'      => 'SMTP_SUNUCU',      // ör. mail.ofis.net
+    'port'      => 587,                // 587 = tls, 465 = ssl
+    'guvenlik'  => 'tls',              // 'tls' veya 'ssl'
+    'kullanici' => 'form@vanterm.com',
+    'sifre'     => 'SIFRE',
+];
+```
+Dosya yoksa `mail()` kullanılır. Her gönderimin sonucu `~/vanterm-form.log` dosyasına yazılır (kişisel veri yok).

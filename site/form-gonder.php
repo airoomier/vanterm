@@ -91,11 +91,70 @@ $basliklar = [
 ];
 if ($eposta !== '') $basliklar[] = 'Reply-To: ' . $eposta;
 
-$ok = @mail(ALICI, $konu, $govde, implode("\r\n", $basliklar), '-f' . GONDEREN);
+// Gönderim: site dışındaki ~/vanterm-smtp.php varsa kimlik doğrulamalı SMTP, yoksa PHP mail()
+$smtpAyar = dirname(__DIR__) . '/vanterm-smtp.php';
+$yontem = 'mail()';
+$hata = '';
+if (is_file($smtpAyar)) {
+    $yontem = 'smtp';
+    $c = require $smtpAyar;
+    $ok = smtp_gonder($c, ALICI, $konu, $govde, $eposta, $hata);
+} else {
+    $ok = @mail(ALICI, $konu, $govde, implode("\r\n", $basliklar), '-f' . GONDEREN);
+    if (!$ok) $hata = (string)(error_get_last()['message'] ?? '');
+}
 
-// Teşhis kaydı (web kökünün DIŞINDA; kişisel veri yazılmaz): tarih, form, mail() sonucu, hata
-$hata = $ok ? '' : (string)(error_get_last()['message'] ?? '');
+// Teşhis kaydı (web kökünün DIŞINDA; kişisel veri yazılmaz)
 @file_put_contents(dirname(__DIR__) . '/vanterm-form.log',
-    date('Y-m-d H:i:s') . ' | ' . $form['ad'] . ' | mail()=' . ($ok ? 'OK' : 'BASARISIZ') . ($hata !== '' ? ' | ' . $hata : '') . "\n",
+    date('Y-m-d H:i:s') . ' | ' . $form['ad'] . ' | ' . $yontem . '=' . ($ok ? 'OK' : 'BASARISIZ') . ($hata !== '' ? ' | ' . $hata : '') . "\n",
     FILE_APPEND | LOCK_EX);
+
 $ok ? cevap(true, $form['basari']) : cevap(false, $form['hata'], 500);
+
+
+/**
+ * Küçük SMTP istemcisi (harici kütüphane yok). $c: host, port, guvenlik ('ssl' | 'tls' | ''), kullanici, sifre, gonderen?
+ */
+function smtp_gonder(array $c, string $alici, string $konu, string $html, string $yanitla, string &$hata): bool {
+    $host = (string)$c['host']; $port = (int)($c['port'] ?? 587); $guv = strtolower((string)($c['guvenlik'] ?? 'tls'));
+    $kimden = (string)($c['gonderen'] ?? $c['kullanici']);
+    $ctx = stream_context_create(['ssl' => ['verify_peer' => true, 'verify_peer_name' => true, 'SNI_enabled' => true]]);
+    $adres = ($guv === 'ssl' ? 'ssl://' : 'tcp://') . $host . ':' . $port;
+    $s = @stream_socket_client($adres, $en, $es, 15, STREAM_CLIENT_CONNECT, $ctx);
+    if (!$s) { $hata = "baglanti: $es ($en)"; return false; }
+    stream_set_timeout($s, 20);
+    $oku = function () use ($s) { $t = ''; while (($l = fgets($s, 1024)) !== false) { $t .= $l; if (strlen($l) < 4 || $l[3] === ' ') break; } return $t; };
+    $son = '';
+    $yaz = function (string $k, array $beklenen) use ($s, $oku, &$son) {
+        if ($k !== '') fwrite($s, $k . "\r\n");
+        $r = $oku(); $kod = (int)substr($r, 0, 3);
+        if (!in_array($kod, $beklenen, true)) { $son = trim(preg_replace('/\s+/', ' ', $r)) ?: 'yanit yok'; return false; }
+        return true;
+    };
+    $ben = $_SERVER['SERVER_NAME'] ?? 'vanterm.com';
+    $bitir = function (string $on = '') use ($s, &$son, &$hata) { $hata = $on . $son; @fclose($s); return false; };
+    if (!$yaz('', [220]) || !$yaz("EHLO $ben", [250])) return $bitir();
+    if ($guv === 'tls') {
+        if (!$yaz('STARTTLS', [220])) return $bitir('STARTTLS: ');
+        if (!stream_socket_enable_crypto($s, true, STREAM_CRYPTO_METHOD_TLSv1_2_CLIENT | (defined('STREAM_CRYPTO_METHOD_TLSv1_3_CLIENT') ? STREAM_CRYPTO_METHOD_TLSv1_3_CLIENT : 0))) return $bitir('TLS kurulamadi ');
+        if (!$yaz("EHLO $ben", [250])) return $bitir();
+    }
+    if (!$yaz('AUTH LOGIN', [334]) || !$yaz(base64_encode((string)$c['kullanici']), [334]) || !$yaz(base64_encode((string)$c['sifre']), [235])) return $bitir('kimlik dogrulama: ');
+    if (!$yaz("MAIL FROM:<$kimden>", [250]) || !$yaz("RCPT TO:<$alici>", [250, 251]) || !$yaz('DATA', [354])) return $bitir();
+    $b = [
+        'Date: ' . date('r'),
+        'From: ' . SITE . " <$kimden>",
+        "To: <$alici>",
+        "Subject: $konu",
+        'Message-ID: <' . bin2hex(random_bytes(12)) . '@vanterm.com>',
+        'MIME-Version: 1.0',
+        'Content-Type: text/html; charset=UTF-8',
+        'Content-Transfer-Encoding: base64',
+    ];
+    if ($yanitla !== '') $b[] = "Reply-To: $yanitla";
+    $veri = implode("\r\n", $b) . "\r\n\r\n" . rtrim(chunk_split(base64_encode($html), 76, "\r\n")) . "\r\n.";
+    if (!$yaz($veri, [250])) return $bitir('DATA: ');
+    $yaz('QUIT', [221]);
+    @fclose($s);
+    return true;
+}
